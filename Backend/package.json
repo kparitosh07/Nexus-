@@ -1,0 +1,25 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "A backend for twitter",
+  "license": "ISC",
+  "author": "Paritosh",
+  "type": "module",
+  "main": "Server.js",
+  "scripts": {
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.11.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1",
+    "google-auth-library": "^11.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.1",
+    "multer": "^2.4.0",
+    "nodemon": "^3.1.14",
+    "socket.io": "^4.8.3"
+  }
+}

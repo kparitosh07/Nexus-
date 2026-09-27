@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus — Social Media</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+  <!-- COMMENTS MODAL -->
+  <div id="comments-modal" class="comments-modal hidden">
+
+    <div class="comments-modal-content">
+
+      <div class="comments-modal-header">
+        <div>
+          <h3>Comments</h3>
+          <span id="comments-count">0 comments</span>
+        </div>
+
+        <button type="button" id="btn-close-comments" class="comments-close-btn">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+
+      <!-- COMMENTS -->
+      <div id="comments-container" class="comments-container">
+      </div>
+
+
+      <!-- COMMENT COMPOSER -->
+      <div class="comment-composer">
+
+        <div id="comment-reply-info" class="comment-reply-info hidden">
+          <span id="comment-reply-text"></span>
+
+          <button type="button" id="btn-cancel-reply">
+            Cancel
+          </button>
+        </div>
+
+        <div class="comment-input-row">
+
+          <input type="text" id="comment-input" maxlength="280" placeholder="Write a comment...">
+
+          <button type="button" id="btn-submit-comment">
+            Comment
+          </button>
+
+        </div>
+
+        <div class="comment-character-count">
+          <span id="comment-char-count">280</span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- ========================================================================= -->
+  <!-- 1. AUTHENTICATION SECTION (Sign In / Sign Up)                             -->
+  <!-- ========================================================================= -->
+  <section id="auth-section" class="auth-section">
+    <div class="auth-wrapper">
+      <!-- Left Branding Banner -->
+      <div class="auth-banner">
+        <div class="brand-logo-large">
+          <i class="fa-brands fa-x-twitter"></i>
+        </div>
+        <h1 class="auth-tagline">Happening now</h1>
+        <p class="auth-subtagline">Join your community today. Connect, share, and see what's trending across the globe.
+        </p>
+        <div class="auth-highlights">
+          <div class="highlight-item">
+            <i class="fa-solid fa-bolt"></i>
+            <span>Real-time news &amp; updates</span>
+          </div>
+          <div class="highlight-item">
+            <i class="fa-solid fa-users"></i>
+            <span>Connect with creators &amp; friends</span>
+          </div>
+          <div class="highlight-item">
+            <i class="fa-solid fa-fire"></i>
+            <span>Discover personalized trending topics</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Form Card -->
+      <div class="auth-card">
+        <div class="brand-logo-mobile">
+          <i class="fa-brands fa-x-twitter"></i>
+        </div>
+
+        <!-- Auth Tabs: Sign In / Sign Up -->
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" id="tab-btn-signin" data-tab="signin">Sign In</button>
+          <button type="button" class="auth-tab-btn" id="tab-btn-signup" data-tab="signup">Create Account</button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="form-signin" class="auth-form active">
+          <h2 class="form-title">Welcome back</h2>
+          <p class="form-desc">Enter your credentials to access your account</p>
+
+          <div class="form-group">
+            <label for="signin-identifier">Email</label>
+            <div class="input-with-icon">
+              <i class="fa-regular fa-user"></i>
+              <input type="email" id="signin-identifier" placeholder="Enter your email" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="signin-password">Password</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="signin-password" placeholder="Enter your password" required
+                autocomplete="current-password">
+              <button type="button" class="toggle-password-btn" aria-label="Toggle password visibility">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary btn-block">Sign In</button>
+
+          <div class="demo-auth-divider">
+            <span>or continue with</span>
+          </div>
+
+          <button type="button" class="btn-google btn-block" id="btn-google-login">
+            <i class="fa-brands fa-google"></i>
+            <span>Sign in with Google</span>
+          </button>
+
+          <p class="auth-switch-text">
+            Don't have an account? <a href="#" id="switch-to-signup">Sign up now</a>
+          </p>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="form-signup" class="auth-form">
+          <h2 class="form-title">Create your account</h2>
+          <p class="form-desc">Fill in the details below to get started</p>
+
+          <div class="form-group">
+            <label for="signup-name">Full Name</label>
+            <div class="input-with-icon">
+              <i class="fa-regular fa-id-card"></i>
+              <input type="text" id="signup-name" placeholder="e.g. Paritosh Sharma" required autocomplete="name">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="signup-username">Username</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-at"></i>
+              <input type="text" id="signup-username" placeholder="e.g. paritosh_dev" required autocomplete="username">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="signup-email">Email Address</label>
+            <div class="input-with-icon">
+              <i class="fa-regular fa-envelope"></i>
+              <input type="email" id="signup-email" placeholder="e.g. paritosh@example.com" required
+                autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="signup-password" placeholder="At least 6 characters" required
+                autocomplete="new-password">
+              <button type="button" class="toggle-password-btn" aria-label="Toggle password visibility">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary btn-block">Sign Up &amp; Enter</button>
+
+          <p class="auth-switch-text">
+            Already have an account? <a href="#" id="switch-to-signin">Sign in</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN APPLICATION (3-Column Layout: Left, Middle, Right)                -->
+  <!-- ========================================================================= -->
+  <div id="main-app" class="main-app hidden">
+    <div class="app-layout">
+
+      <!-- ========================================== -->
+      <!-- LEFT SECTION: Navigation & Profile Menu    -->
+      <!-- Features: Feed, Search, Inbox, Notifications, Profile -->
+      <!-- ========================================== -->
+      <aside class="sidebar-left" aria-label="Primary Navigation">
+        <div class="sidebar-left-content">
+          <!-- Logo -->
+          <div class="logo-box" id="logo-home-trigger" title="Home">
+            <i class="fa-brands fa-x-twitter"></i>
+          </div>
+
+          <!-- Navigation Links -->
+          <nav class="nav-menu">
+            <button type="button" class="nav-item active" id="nav-feed" data-view="feed">
+              <i class="fa-solid fa-house"></i>
+              <span class="nav-label">Feed</span>
+            </button>
+            <button type="button" class="nav-item" id="nav-search" data-view="search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <span class="nav-label">Search</span>
+            </button>
+            <button type="button" class="nav-item" id="nav-notifications" data-view="notifications">
+              <div class="icon-badge-wrapper">
+                <i class="fa-regular fa-bell"></i>
+                <span class="badge" id="badge-notifications" style="display:none;">0</span>
+              </div>
+              <span class="nav-label">Notifications</span>
+            </button>
+            <button type="button" class="nav-item" id="nav-inbox" data-view="inbox">
+              <div class="icon-badge-wrapper">
+                <i class="fa-regular fa-envelope"></i>
+                <span class="badge" id="badge-inbox" style="display:none;">0</span>
+              </div>
+              <span class="nav-label">Inbox</span>
+            </button>
+            <button type="button" class="nav-item" id="nav-profile" data-view="profile">
+              <i class="fa-regular fa-user"></i>
+              <span class="nav-label">Profile</span>
+            </button>
+          </nav>
+
+          <!-- Quick Post CTA button (left section) -->
+          <button type="button" class="btn-primary btn-tweet-main" id="btn-sidebar-post">
+            <i class="fa-solid fa-feather-pointed"></i>
+            <span class="btn-text">Post</span>
+          </button>
+
+          <!-- Current Logged-in User Account Card (Pill) -->
+          <div class="user-pill-container">
+            <div class="user-pill" id="user-pill">
+              <img id="pill-user-avatar" class="avatar avatar-md" src="" alt="User avatar">
+              <div class="user-pill-details">
+                <div class="user-pill-name" id="pill-user-name">Loading...</div>
+                <div class="user-pill-handle" id="pill-user-handle">@loading</div>
+              </div>
+              <button type="button" class="btn-logout" id="btn-logout" title="Sign Out" aria-label="Sign Out">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+
+      <!-- ========================================== -->
+      <!-- MIDDLE SECTION: Create Post & Dynamic Feed / Views -->
+      <!-- Features: Create Post, Feed Posts (Twitter/Instagram style with Follow button), Profile View -->
+      <!-- ========================================== -->
+      <main class="main-content" id="main-content" aria-label="Main Feed and Content">
+        <!-- Top Sticky Header -->
+        <header class="main-header">
+          <div class="header-left">
+            <button type="button" class="btn-back hidden" id="btn-header-back" aria-label="Go back">
+              <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h2 class="header-title" id="header-title">Home</h2>
+          </div>
+          <!-- Feed Switcher Tabs (For You / Following) visible when in feed view -->
+          <div class="feed-tabs" id="feed-filter-tabs">
+            <button type="button" class="feed-tab active" data-filter="all">For You</button>
+            <button type="button" class="feed-tab" data-filter="following">Following</button>
+          </div>
+        </header>
+
+        <!-- VIEW 1: FEED (Create Post + Feed Posts) -->
+        <div class="view-panel active" id="view-feed">
+          <!-- CREATE POST BOX -->
+          <section class="create-post-card">
+            <div class="create-post-left">
+              <img id="create-post-avatar" class="avatar avatar-md" src="" alt="Your avatar">
+            </div>
+            <div class="create-post-right">
+              <textarea id="post-input-text" class="post-textarea" placeholder="What is happening?!" rows="3"
+                maxlength="280"></textarea>
+
+              <!-- Image Preview Box (appears when image is selected) -->
+              <div id="image-preview-wrapper" class="image-preview-wrapper hidden">
+                <img id="image-preview-img" src="" alt="Selected attachment preview">
+                <button type="button" class="btn-remove-preview" id="btn-remove-preview" title="Remove image">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <!-- Media Attachment Input Bar (supports file upload or image URL) -->
+              <div id="image-url-bar" class="image-url-bar hidden">
+                <input type="url" id="post-image-url-input" placeholder="Paste image URL here (https://...)"
+                  class="input-inline">
+                <button type="button" class="btn-secondary btn-sm" id="btn-apply-image-url">Attach</button>
+              </div>
+
+              <!-- Post Toolbar & Submit -->
+              <div class="create-post-footer">
+                <div class="create-post-actions">
+                  <!-- File Upload Button -->
+                  <label class="action-icon-btn" title="Upload local image" for="post-file-input">
+                    <i class="fa-regular fa-image"></i>
+                    <input type="file" id="post-file-input" accept="image/*" class="sr-only">
+                  </label>
+                  <!-- Image URL Button -->
+                  <button type="button" class="action-icon-btn" id="btn-toggle-image-url" title="Attach image via URL">
+                    <i class="fa-solid fa-link"></i>
+                  </button>
+                  <!-- Emoji Shortcut Button -->
+                  <button type="button" class="action-icon-btn" id="btn-insert-emoji" title="Insert emoji">
+                    <i class="fa-regular fa-face-smile"></i>
+                  </button>
+                </div>
+
+                <div class="create-post-submit-group">
+                  <span class="char-counter" id="char-counter">280</span>
+                  <button type="button" class="btn-primary btn-tweet" id="btn-submit-post" disabled>
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- DYNAMIC FEED CONTAINER (NO hardcoded posts! Rendered dynamically via JS) -->
+          <div id="feed-container" class="feed-container">
+            <!-- Dynamic posts inserted here by JS -->
+          </div>
+        </div>
+
+        <!-- VIEW 2: SEARCH (Dynamic Search & Explore) -->
+        <div class="view-panel" id="view-search">
+          <div class="search-page-header">
+            <div class="search-bar-full">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="page-search-input" placeholder="Search posts, hashtags, or users..."
+                autocomplete="off">
+              <button type="button" class="btn-clear-search hidden" id="btn-clear-search">
+                <i class="fa-solid fa-circle-xmark"></i>
+              </button>
+            </div>
+          </div>
+          <!-- Dynamic search results container -->
+          <div id="search-results-container" class="search-results-container">
+            <!-- Dynamic results inserted here by JS -->
+          </div>
+        </div>
+
+        <!-- VIEW 3: NOTIFICATIONS -->
+        <div class="view-panel" id="view-notifications">
+          <div class="notification-tabs">
+            <button type="button" class="sub-tab active">All</button>
+            <button type="button" class="sub-tab">Mentions</button>
+          </div>
+          <!-- Dynamic notifications container -->
+          <div id="notifications-container" class="notifications-container">
+            <!-- Dynamic notifications inserted here by JS -->
+          </div>
+        </div>
+
+        <!-- VIEW 4: INBOX / MESSAGES -->
+        <div class="view-panel" id="view-inbox">
+          <!-- Dynamic inbox container -->
+          <div id="inbox-container" class="inbox-container">
+            <!-- Dynamic conversations inserted here by JS -->
+          </div>
+        </div>
+
+        <!-- VIEW 5: PROFILE VIEW -->
+        <!-- Requirement: Show Name, Username, Email, No. of Followers, No. of Following, and Your Posts -->
+        <div class="view-panel" id="view-profile">
+          <div class="profile-header-banner" id="profile-banner"></div>
+
+          <div class="profile-info-section">
+            <div class="profile-avatar-row">
+              <img id="profile-page-avatar" class="avatar avatar-xl profile-avatar-overlap" src="" alt="Profile avatar">
+              <div class="profile-action-btn-wrapper">
+                <button type="button" class="btn-secondary btn-edit-profile" id="btn-edit-profile">
+                  <i class="fa-regular fa-pen-to-square"></i> Edit Profile
+                </button>
+              </div>
+            </div>
+
+            <!-- Profile Details: Name, Username, Email -->
+            <div class="profile-user-meta">
+              <h2 class="profile-name" id="profile-display-name">Loading...</h2>
+              <div class="profile-handle" id="profile-display-handle">@loading</div>
+
+              <!-- Email Display (Required) -->
+              <div class="profile-email-badge">
+                <i class="fa-regular fa-envelope"></i>
+                <span id="profile-display-email">loading@example.com</span>
+              </div>
+
+              <!-- Bio -->
+              <p class="profile-bio" id="profile-display-bio">Passionate explorer, builder, and communicator. Welcome to
+                my page!</p>
+
+              <!-- Join date & location -->
+              <div class="profile-meta-details">
+                <span><i class="fa-regular fa-calendar"></i> Joined September 2026</span>
+              </div>
+
+              <!-- Stats: Followers & Following (Required) -->
+              <div class="profile-stats-row">
+                <div class="stat-item" id="stat-following-wrap">
+                  <span class="stat-count" id="profile-following-count">0</span>
+                  <span class="stat-label">Following</span>
+                </div>
+                <div class="stat-item" id="stat-followers-wrap">
+                  <span class="stat-count" id="profile-followers-count">0</span>
+                  <span class="stat-label">Followers</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-count" id="profile-posts-count">0</span>
+                  <span class="stat-label">Posts</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Profile Tab: "Your Posts" -->
+            <div class="profile-feed-tabs">
+              <button type="button" class="profile-tab active" data-ptab="posts">Your Posts</button>
+              <button type="button" class="profile-tab" data-ptab="likes">Liked Posts</button>
+            </div>
+
+            <!-- Dynamic Container for User's Posts -->
+            <div id="profile-posts-container" class="feed-container">
+              <!-- Dynamically populated with user's posts via JS -->
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+
+      <!-- ========================================== -->
+      <!-- RIGHT SECTION: What's Trending & Follow Suggestions -->
+      <!-- ========================================== -->
+      <aside class="sidebar-right" aria-label="Trends and Suggestions">
+        <div class="sidebar-right-content">
+
+          <!-- Search Widget -->
+          <div class="widget-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="quick-search-input" placeholder="Search" autocomplete="off">
+          </div>
+
+          <!-- WIDGET 1: WHAT'S TRENDING -->
+          <section class="widget-card" aria-labelledby="trending-heading">
+            <div class="widget-header">
+              <h3 id="trending-heading" class="widget-title">What's happening</h3>
+            </div>
+            <!-- Dynamic Trending List (NO hardcoded items, rendered dynamically via JS) -->
+            <div id="trending-list" class="widget-list">
+              <!-- Dynamically populated by JS -->
+            </div>
+          </section>
+
+          <!-- WIDGET 2: FOLLOW SUGGESTIONS -->
+          <section class="widget-card" aria-labelledby="suggestions-heading">
+            <div class="widget-header">
+              <h3 id="suggestions-heading" class="widget-title">Who to follow</h3>
+            </div>
+            <!-- Dynamic Suggestions List (NO hardcoded users, rendered dynamically via JS) -->
+            <div id="suggestions-list" class="widget-list">
+              <!-- Dynamically populated by JS -->
+            </div>
+          </section>
+
+          <!-- Footer Attribution / Links -->
+          <footer class="sidebar-footer">
+            <a href="#">Terms of Service</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Cookie Policy</a>
+            <a href="#">Accessibility</a>
+            <span>&copy; 2026 Nexus Social</span>
+          </footer>
+
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: EDIT PROFILE                                                       -->
+  <!-- ========================================================================= -->
+  <div id="modal-edit-profile" class="modal-overlay hidden" role="dialog" aria-modal="true"
+    aria-labelledby="modal-edit-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-edit-title" class="modal-title">Edit Profile</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-edit-modal" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="form-edit-profile" class="modal-body">
+        <div class="form-group">
+          <label for="edit-profile-name">Display Name</label>
+          <input type="text" id="edit-profile-name" required class="input-modal">
+        </div>
+        <div class="form-group">
+          <label for="edit-profile-bio">Bio</label>
+          <textarea id="edit-profile-bio" rows="3" class="input-modal"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="edit-profile-avatar">Avatar URL</label>
+          <input type="url" id="edit-profile-avatar" placeholder="https://..." class="input-modal">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btn-cancel-edit">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main JavaScript File -->
+  <script src="script.js"></script>
+</body>
+
+</html>
