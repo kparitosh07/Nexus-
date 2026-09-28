@@ -1651,67 +1651,66 @@ function buildCommentTree(comments) {
 
 function renderComments(comments) {
 
-    const container = $("comments-container");
+  const container = $("comments-container");
 
-    if (!container) {
-        return;
-    }
+  if (!container) {
+    return;
+  }
 
-    const count = $("comments-count");
+  const count = $("comments-count");
 
-    if (count) {
-        count.textContent =
-            `${comments.length} ${
-                comments.length === 1
-                    ? "comment"
-                    : "comments"
-            }`;
-    }
+  if (count) {
+    count.textContent =
+      `${comments.length} ${comments.length === 1
+        ? "comment"
+        : "comments"
+      }`;
+  }
 
-    if (!comments.length) {
+  if (!comments.length) {
 
-        container.innerHTML = `
+    container.innerHTML = `
             <div class="comments-empty">
                 <h3>No comments yet</h3>
                 <p>Be the first to comment.</p>
             </div>
         `;
 
-        return;
-    }
+    return;
+  }
 
-    const tree = buildCommentTree(comments);
+  const tree = buildCommentTree(comments);
 
-    container.innerHTML = tree
-        .map(comment =>
-            renderCommentNode(comment)
-        )
-        .join("");
+  container.innerHTML = tree
+    .map(comment =>
+      renderCommentNode(comment)
+    )
+    .join("");
 }
 
 function renderCommentNode(comment) {
 
-    const author = comment.author || {};
+  const author = comment.author || {};
 
-    const commentId = comment._id;
+  const commentId = comment._id;
 
-    const authorId =
-        author._id ||
-        author.id;
+  const authorId =
+    author._id ||
+    author.id;
 
-    const isOwner =
-        currentUser &&
-        authorId &&
-        String(authorId) ===
-        String(
-            currentUser.id ||
-            currentUser._id
-        );
+  const isOwner =
+    currentUser &&
+    authorId &&
+    String(authorId) ===
+    String(
+      currentUser.id ||
+      currentUser._id
+    );
 
-    const children =
-        comment.children || [];
+  const children =
+    comment.children || [];
 
-    return `
+  return `
         <div
             class="comment-node"
             data-comment-id="${escapeHTML(commentId)}"
@@ -1721,9 +1720,9 @@ function renderCommentNode(comment) {
 
                 <div class="comment-avatar">
                     ${avatarHTML(
-                        author,
-                        "avatar avatar-sm"
-                    )}
+    author,
+    "avatar avatar-sm"
+  )}
                 </div>
 
                 <div class="comment-body">
@@ -1732,24 +1731,24 @@ function renderCommentNode(comment) {
 
                         <strong>
                             ${escapeHTML(
-                                author.name ||
-                                author.username ||
-                                "User"
-                            )}
+    author.name ||
+    author.username ||
+    "User"
+  )}
                         </strong>
 
                         <span>
                             @${escapeHTML(
-                                author.username || ""
-                            )}
+    author.username || ""
+  )}
                         </span>
 
                     </div>
 
                     <div class="comment-text">
                         ${escapeHTML(
-                            comment.content || ""
-                        )}
+    comment.content || ""
+  )}
                     </div>
 
                     <div class="comment-actions">
@@ -1770,9 +1769,8 @@ function renderCommentNode(comment) {
                             ${comment.likesCount || 0}
                         </button>
 
-                        ${
-                            isOwner
-                                ? `
+                        ${isOwner
+      ? `
                                     <button
                                         type="button"
                                         data-action="edit-comment"
@@ -1789,8 +1787,8 @@ function renderCommentNode(comment) {
                                         Delete
                                     </button>
                                 `
-                                : ""
-                        }
+      : ""
+    }
 
                     </div>
 
@@ -1798,21 +1796,20 @@ function renderCommentNode(comment) {
 
             </div>
 
-            ${
-                children.length > 0
-                    ? `
+            ${children.length > 0
+      ? `
                         <div class="comment-children">
 
                             ${children
-                                .map(child =>
-                                    renderCommentNode(child)
-                                )
-                                .join("")}
+        .map(child =>
+          renderCommentNode(child)
+        )
+        .join("")}
 
                         </div>
                     `
-                    : ""
-            }
+      : ""
+    }
 
         </div>
     `;
@@ -2481,53 +2478,101 @@ async function editPost(postId) {
    GET /api/users
    ========================================================= */
 
-function renderWhoToFollow() {
+async function renderWhoToFollow() {
   const container = $("suggestions-list");
 
   if (!container || !currentUser) return;
 
   const currentUserId = currentUser.id || currentUser._id;
 
-  // Remove current user from suggestions
-  const suggestions = allUsers.filter(
-    user => String(user._id || user.id) !== String(currentUserId)
-  );
+  try {
+    // Get users that the current user is already following
+    const response = await fetch(`${API}/follows/me/following`, {
+      headers: {
+        Authorization: `Bearer ${currentToken}`,
+      },
+    });
 
-  // Show maximum 3 users
-  const usersToShow = suggestions.slice(0, 3);
+    const data = await response.json();
 
-  if (!usersToShow.length) {
+    const followingUsers = data.success
+      ? data.users || []
+      : [];
+
+    // Store their IDs in a Set for fast checking
+    const followingIds = new Set(
+      followingUsers.map(
+        user => String(user._id || user.id)
+      )
+    );
+
+    // Remove:
+    // 1. Current user
+    // 2. Users already being followed
+    const suggestions = allUsers.filter(user => {
+      const userId = String(user._id || user.id);
+
+      return (
+        userId !== String(currentUserId) &&
+        !followingIds.has(userId)
+      );
+    });
+
+    // Show maximum 3 users
+    const usersToShow = suggestions.slice(0, 3);
+
+    if (!usersToShow.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No users to follow yet.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = usersToShow.map(user => {
+      const userId = user._id || user.id;
+
+      return `
+        <div class="who-follow-user">
+
+          ${avatarHTML(user, "avatar avatar-sm")}
+
+          <div class="who-follow-info">
+            <strong>
+              ${escapeHTML(user.name || user.username)}
+            </strong>
+
+            <span>
+              @${escapeHTML(user.username)}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            class="follow-btn"
+            data-action="follow-user"
+            data-id="${escapeHTML(userId)}"
+          >
+            Follow
+          </button>
+
+        </div>
+      `;
+    }).join("");
+
+  } catch (error) {
+    console.error(
+      "Error loading follow suggestions:",
+      error
+    );
+
     container.innerHTML = `
-            <div class="empty-state">
-                <p>No users to follow yet.</p>
-            </div>
-        `;
-    return;
+      <div class="empty-state">
+        <p>Unable to load suggestions.</p>
+      </div>
+    `;
   }
-
-  container.innerHTML = usersToShow.map(user => {
-    const userId = user._id || user.id;
-
-    return `
-            <div class="who-follow-user">
-                ${avatarHTML(user, "avatar avatar-sm")}
-
-                <div class="who-follow-info">
-                    <strong>${escapeHTML(user.name || user.username)}</strong>
-                    <span>@${escapeHTML(user.username)}</span>
-                </div>
-
-                <button
-                    type="button"
-                    class="follow-btn"
-                    data-action="follow-user"
-                    data-id="${escapeHTML(userId)}"
-                >
-                    Follow
-                </button>
-            </div>
-        `;
-  }).join("");
 }
 
 async function loadUsers() {
@@ -3442,17 +3487,14 @@ async function followUser(userId, button) {
       }
     );
 
-    button.textContent = "Following";
-
-    button.dataset.following = "true";
-    button.dataset.action = "unfollow-user";
-
-    button.classList.add("following");
-
     showToast(
       "User followed successfully!",
       "success"
     );
+
+    // Refresh the suggestions list
+    // This removes the user we just followed
+    await renderWhoToFollow();
 
   } catch (error) {
 
@@ -3510,6 +3552,19 @@ async function unfollowUser(userId, button) {
       "success"
     );
 
+
+    await renderProfile();
+
+    const modal = $("follow-list-modal");
+
+    if (
+      modal &&
+      !modal.classList.contains("hidden")
+    ) {
+      await openFollowList("following");
+    }
+
+
   } catch (error) {
 
     console.error(
@@ -3531,6 +3586,190 @@ async function unfollowUser(userId, button) {
   }
 }
 
+async function openFollowList(type) {
+
+  if (!currentToken || !currentUser) {
+    showToast(
+      "Please sign in first.",
+      "error"
+    );
+
+    return;
+  }
+
+  const modal = $("follow-list-modal");
+  const title = $("follow-list-title");
+  const container = $("follow-list-container");
+
+  if (!modal || !title || !container) {
+    console.error("Follow list modal elements not found.");
+    return;
+  }
+
+  const userId =
+    currentUser.id ||
+    currentUser._id;
+
+  if (!userId) {
+    showToast(
+      "Unable to identify user.",
+      "error"
+    );
+
+    return;
+  }
+
+  title.textContent =
+    type === "followers"
+      ? "Followers"
+      : "Following";
+
+  container.innerHTML = `
+    <div class="follow-list-loading">
+      Loading...
+    </div>
+  `;
+
+  modal.classList.remove("hidden");
+
+  try {
+
+    const endpoint =
+      type === "followers"
+        ? `${API}/follows/${userId}/followers`
+        : `${API}/follows/${userId}/following`;
+
+    const response = await fetch(endpoint, {
+      headers: {
+        Authorization:
+          `Bearer ${currentToken}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message ||
+        "Unable to load follow list."
+      );
+    }
+
+    const users = data.users || [];
+
+    if (!users.length) {
+
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>
+            No ${type === "followers"
+          ? "followers"
+          : "following"
+        } yet.
+          </p>
+        </div>
+      `;
+
+      return;
+    }
+
+    container.innerHTML = users.map(user => {
+
+      const userId = user._id || user.id;
+
+      return `
+    <div class="follow-list-user">
+
+      ${avatarHTML(
+        user,
+        "avatar avatar-sm"
+      )}
+
+      <div class="follow-list-info">
+
+        <strong>
+          ${escapeHTML(
+        user.name ||
+        user.username ||
+        "User"
+      )}
+        </strong>
+
+        <span>
+          @${escapeHTML(
+        user.username || ""
+      )}
+        </span>
+
+      </div>
+
+      ${type === "following"
+          ? `
+            <button
+              type="button"
+              class="follow-btn following"
+              data-action="unfollow-user"
+              data-id="${escapeHTML(userId)}"
+            >
+              Unfollow
+            </button>
+          `
+          : ""
+        }
+
+    </div>
+  `;
+
+    }).join("");
+
+  } catch (error) {
+
+    console.error(
+      "Open follow list error:",
+      error
+    );
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>
+          Unable to load ${type === "followers"
+        ? "followers"
+        : "following"
+      }.
+        </p>
+      </div>
+    `;
+  }
+}
+
+function closeFollowList() {
+
+  const modal =
+    $("follow-list-modal");
+
+  if (!modal) return;
+
+  modal.classList.add("hidden");
+}
+
+$("close-follow-list")?.addEventListener(
+  "click",
+  closeFollowList
+);
+
+$("follow-list-modal")?.addEventListener(
+  "click",
+  (event) => {
+
+    if (
+      event.target.id ===
+      "follow-list-modal"
+    ) {
+      closeFollowList();
+    }
+
+  }
+);
 
 /* =========================================================
    DYNAMIC POST BUTTONS
@@ -3551,49 +3790,88 @@ function handleDynamicClicks(event) {
   const id =
     button.dataset.id;
 
+
   // ---------- POSTS ----------
 
   if (action === "delete-post") {
+
     deletePost(id);
+
     return;
   }
 
   if (action === "edit-post") {
+
     editPost(id);
+
     return;
   }
+
 
   // ---------- FOLLOW ----------
 
   if (action === "follow-user") {
+
     followUser(id, button);
+
     return;
   }
 
   if (action === "unfollow-user") {
+
     unfollowUser(id, button);
+
     return;
   }
 
+
+  // ---------- FOLLOW LISTS ----------
+
+  if (action === "open-followers") {
+
+    openFollowList("followers");
+
+    return;
+  }
+
+  if (action === "open-following") {
+
+    openFollowList("following");
+
+    return;
+  }
+
+
+  // ---------- COMMENTS ----------
+
   if (action === "open-comments") {
+
     openComments(id);
+
     return;
   }
 
   if (action === "reply-comment") {
+
     startCommentReply(id);
+
     return;
   }
 
   if (action === "edit-comment") {
+
     editComment(id);
+
     return;
   }
 
   if (action === "delete-comment") {
+
     deleteComment(id);
+
     return;
   }
+
 }
 
 

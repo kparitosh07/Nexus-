@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import { Follow } from "../models/follow.model.js";
 
 export const createUser = async (req,res) => {
     try {

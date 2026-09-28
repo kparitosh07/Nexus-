@@ -433,18 +433,44 @@
 
               <!-- Stats: Followers & Following (Required) -->
               <div class="profile-stats-row">
-                <div class="stat-item" id="stat-following-wrap">
-                  <span class="stat-count" id="profile-following-count">0</span>
-                  <span class="stat-label">Following</span>
+
+                <!-- Following -->
+                <div class="stat-item clickable-stat" id="stat-following-wrap" data-action="open-following">
+                  <span class="stat-count" id="profile-following-count">
+                    0
+                  </span>
+
+                  <span class="stat-label">
+                    Following
+                  </span>
                 </div>
-                <div class="stat-item" id="stat-followers-wrap">
-                  <span class="stat-count" id="profile-followers-count">0</span>
-                  <span class="stat-label">Followers</span>
+
+
+                <!-- Followers -->
+                <div class="stat-item clickable-stat" id="stat-followers-wrap" data-action="open-followers">
+                  <span class="stat-count" id="profile-followers-count">
+                    0
+                  </span>
+
+                  <span class="stat-label">
+                    Followers
+                  </span>
                 </div>
+
+
+                <!-- Posts -->
                 <div class="stat-item">
-                  <span class="stat-count" id="profile-posts-count">0</span>
-                  <span class="stat-label">Posts</span>
+
+                  <span class="stat-count" id="profile-posts-count">
+                    0
+                  </span>
+
+                  <span class="stat-label">
+                    Posts
+                  </span>
+
                 </div>
+
               </div>
             </div>
 
@@ -547,6 +573,36 @@
     </div>
   </div>
 
+  <!-- Followers / Following Modal -->
+
+  <div id="follow-list-modal" class="follow-list-modal hidden">
+
+    <div class="follow-list-modal-content">
+
+      <div class="follow-list-header">
+
+        <h3 id="follow-list-title">
+          Followers
+        </h3>
+
+        <button type="button" id="close-follow-list" class="close-follow-list">
+          ×
+        </button>
+
+      </div>
+
+
+      <div id="follow-list-container" class="follow-list-container">
+
+        <div class="follow-list-loading">
+          Loading...
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
   <!-- Main JavaScript File -->
   <script src="script.js"></script>
 </body>
