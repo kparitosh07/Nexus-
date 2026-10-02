@@ -7,6 +7,7 @@ import tweetRoutes from "./routes/post.route.js";
 import userRoutes from "./routes/user.route.js";
 import followRoutes from "./routes/follow.route.js";
 import commentRoutes from "./routes/comment.route.js";
+import likeRoutes from "./routes/like.route.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,7 @@ app.use("/api/tweets", tweetRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/follows", followRoutes);
 app.use("/api/comments",commentRoutes);
+app.use("/api/likes",likeRoutes);
 
 app.use(express.static(path.join(__dirname, "../Frontend")));
 

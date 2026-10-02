@@ -286,17 +286,17 @@ function showAuth() {
 
 function showApp() {
 
-    $("auth-section")
-        ?.classList.add("hidden");
+  $("auth-section")
+    ?.classList.add("hidden");
 
-    $("main-app")
-        ?.classList.remove("hidden");
+  $("main-app")
+    ?.classList.remove("hidden");
 
-    updateUserUI();
+  updateUserUI();
 
-    connectSocket();
+  connectSocket();
 
-    switchView("feed");
+  switchView("feed");
 }
 
 
@@ -830,32 +830,32 @@ async function handleGoogleCredential(
 
 function handleLogout() {
 
-    if (socket) {
+  if (socket) {
 
-        socket.disconnect();
+    socket.disconnect();
 
-        socket = null;
-    }
+    socket = null;
+  }
 
-    followingUsers = [];
-    inboxUsers = [];
-    searchUsersResults = [];
-    activeChatUser = null;
-    chatMessages = [];
+  followingUsers = [];
+  inboxUsers = [];
+  searchUsersResults = [];
+  activeChatUser = null;
+  chatMessages = [];
 
-    clearAuth();
+  clearAuth();
 
-    allPosts = [];
-    allUsers = [];
+  allPosts = [];
+  allUsers = [];
 
-    showAuth();
+  showAuth();
 
-    switchAuthTab("signin");
+  switchAuthTab("signin");
 
-    showToast(
-        "You have been signed out.",
-        "success"
-    );
+  showToast(
+    "You have been signed out.",
+    "success"
+  );
 }
 
 
@@ -1020,207 +1020,207 @@ function switchView(view) {
     renderInbox();
 
     if (
-        socket &&
-        socket.connected
+      socket &&
+      socket.connected
     ) {
 
-        socket.emit(
-            "load-following"
-        );
+      socket.emit(
+        "load-following"
+      );
     }
-}
+  }
 }
 
 function connectSocket() {
 
-    if (!currentToken) {
-        return;
+  if (!currentToken) {
+    return;
+  }
+
+  // Don't create multiple connections
+  if (socket && socket.connected) {
+    return;
+  }
+
+  socket = io({
+    auth: {
+      token: currentToken
     }
+  });
 
-    // Don't create multiple connections
-    if (socket && socket.connected) {
-        return;
-    }
+  socket.on("connect", () => {
 
-    socket = io({
-        auth: {
-            token: currentToken
-        }
-    });
-
-    socket.on("connect", () => {
-
-        console.log(
-            "Socket connected:",
-            socket.id
-        );
-
-        socket.emit(
-            "load-following"
-        );
-
-        if (activeChatUser) {
-
-            socket.emit(
-                "load-messages",
-                activeChatUser.id
-            );
-        }
-    });
-
-    socket.on("connect_error", (error) => {
-
-        console.error(
-            "Socket connection error:",
-            error.message
-        );
-
-        showToast(
-            "Realtime chat connection failed.",
-            "error"
-        );
-    });
-
-    socket.on("disconnect", () => {
-
-        console.log(
-            "Socket disconnected"
-        );
-    });
-
-
-    // Following users
-    socket.on(
-        "following-list",
-        (users) => {
-
-            followingUsers =
-                Array.isArray(users)
-                    ? users
-                    : [];
-
-            inboxUsers = [
-                ...followingUsers
-            ];
-
-            renderInbox();
-        }
+    console.log(
+      "Socket connected:",
+      socket.id
     );
 
+    socket.emit(
+      "load-following"
+    );
 
-    // Search results
-    socket.on("search-results", (users) => {
+    if (activeChatUser) {
+
+      socket.emit(
+        "load-messages",
+        activeChatUser.id
+      );
+    }
+  });
+
+  socket.on("connect_error", (error) => {
+
+    console.error(
+      "Socket connection error:",
+      error.message
+    );
+
+    showToast(
+      "Realtime chat connection failed.",
+      "error"
+    );
+  });
+
+  socket.on("disconnect", () => {
+
+    console.log(
+      "Socket disconnected"
+    );
+  });
+
+
+  // Following users
+  socket.on(
+    "following-list",
+    (users) => {
+
+      followingUsers =
+        Array.isArray(users)
+          ? users
+          : [];
+
+      inboxUsers = [
+        ...followingUsers
+      ];
+
+      renderInbox();
+    }
+  );
+
+
+  // Search results
+  socket.on("search-results", (users) => {
 
     searchUsersResults =
-        Array.isArray(users)
-            ? users
-            : [];
+      Array.isArray(users)
+        ? users
+        : [];
 
     // Only update the user list
     // Don't recreate the search input
     renderInboxUsersOnly();
-});
+  });
 
 
-    // Chat history
-    socket.on(
-        "chat-history",
-        (messages) => {
+  // Chat history
+  socket.on(
+    "chat-history",
+    (messages) => {
 
-            chatMessages =
-                Array.isArray(messages)
-                    ? messages
-                    : [];
+      chatMessages =
+        Array.isArray(messages)
+          ? messages
+          : [];
 
-            renderChatMessages();
-        }
-    );
-
-
-    // New real-time message
-    socket.on(
-        "private-message",
-        (message) => {
-
-            handleIncomingMessage(
-                message
-            );
-        }
-    );
+      renderChatMessages();
+    }
+  );
 
 
-    // A new chat was added
-    socket.on(
-        "chat-added",
-        (user) => {
+  // New real-time message
+  socket.on(
+    "private-message",
+    (message) => {
 
-            if (!user?.id) {
-                return;
-            }
-
-            const exists =
-                inboxUsers.some(
-                    item =>
-                        String(item.id) ===
-                        String(user.id)
-                );
-
-            if (!exists) {
-
-                inboxUsers.push(user);
-            }
-
-            renderInbox();
-        }
-    );
+      handleIncomingMessage(
+        message
+      );
+    }
+  );
 
 
-    // Online/offline status
-    socket.on(
-        "user-status",
-        ({ userId, online }) => {
+  // A new chat was added
+  socket.on(
+    "chat-added",
+    (user) => {
 
-            updateInboxUserStatus(
-                userId,
-                online
-            );
-        }
-    );
+      if (!user?.id) {
+        return;
+      }
+
+      const exists =
+        inboxUsers.some(
+          item =>
+            String(item.id) ===
+            String(user.id)
+        );
+
+      if (!exists) {
+
+        inboxUsers.push(user);
+      }
+
+      renderInbox();
+    }
+  );
 
 
-    // Profile updated
-    socket.on(
-        "profile-updated",
-        ({ userId, profile }) => {
+  // Online/offline status
+  socket.on(
+    "user-status",
+    ({ userId, online }) => {
 
-            updateInboxUserProfile(
-                userId,
-                profile
-            );
-        }
-    );
+      updateInboxUserStatus(
+        userId,
+        online
+      );
+    }
+  );
+
+
+  // Profile updated
+  socket.on(
+    "profile-updated",
+    ({ userId, profile }) => {
+
+      updateInboxUserProfile(
+        userId,
+        profile
+      );
+    }
+  );
 }
 
 
 function renderInbox() {
 
-    const container = $("inbox-container");
+  const container = $("inbox-container");
 
-    if (!container) {
-        return;
-    }
+  if (!container) {
+    return;
+  }
 
-    // Save current search text before rebuilding DOM
-    const existingSearchInput =
-        $("inbox-search-input");
+  // Save current search text before rebuilding DOM
+  const existingSearchInput =
+    $("inbox-search-input");
 
-    const currentSearch =
-        existingSearchInput
-            ? existingSearchInput.value
-            : "";
+  const currentSearch =
+    existingSearchInput
+      ? existingSearchInput.value
+      : "";
 
 
-    container.innerHTML = `
+  container.innerHTML = `
 
         <div class="inbox-layout">
 
@@ -1260,44 +1260,44 @@ function renderInbox() {
     `;
 
 
-    setupInboxSearch();
+  setupInboxSearch();
 
-    // Restore cursor/focus after rebuilding
-    const newSearchInput =
-        $("inbox-search-input");
+  // Restore cursor/focus after rebuilding
+  const newSearchInput =
+    $("inbox-search-input");
 
-    if (newSearchInput) {
+  if (newSearchInput) {
 
-        newSearchInput.focus();
+    newSearchInput.focus();
 
-        // Put cursor at the end
-        newSearchInput.setSelectionRange(
-            newSearchInput.value.length,
-            newSearchInput.value.length
-        );
-    }
+    // Put cursor at the end
+    newSearchInput.setSelectionRange(
+      newSearchInput.value.length,
+      newSearchInput.value.length
+    );
+  }
 
 
-    if (activeChatUser) {
-        renderActiveChat();
-    }
+  if (activeChatUser) {
+    renderActiveChat();
+  }
 }
 
 
 
 function renderInboxUsers() {
 
-    const following =
-        followingUsers || [];
+  const following =
+    followingUsers || [];
 
-    const searchResults =
-        searchUsersResults || [];
-
-
-    let html = "";
+  const searchResults =
+    searchUsersResults || [];
 
 
-    html += `
+  let html = "";
+
+
+  html += `
 
         <div class="inbox-section-title">
 
@@ -1307,9 +1307,9 @@ function renderInboxUsers() {
     `;
 
 
-    if (!following.length) {
+  if (!following.length) {
 
-        html += `
+    html += `
 
             <div class="inbox-empty-small">
 
@@ -1318,19 +1318,19 @@ function renderInboxUsers() {
             </div>
         `;
 
-    } else {
+  } else {
 
-        html += following
-            .map(renderInboxUser)
-            .join("");
-    }
+    html += following
+      .map(renderInboxUser)
+      .join("");
+  }
 
 
-    if (
-        searchResults.length
-    ) {
+  if (
+    searchResults.length
+  ) {
 
-        html += `
+    html += `
 
             <div class="inbox-section-title">
 
@@ -1339,37 +1339,37 @@ function renderInboxUsers() {
             </div>
         `;
 
-        html += searchResults
-            .map(renderInboxUser)
-            .join("");
-    }
+    html += searchResults
+      .map(renderInboxUser)
+      .join("");
+  }
 
 
-    return html;
+  return html;
 }
 
 function renderInboxUsersOnly() {
 
-    const section =
-        $("inbox-user-sections");
+  const section =
+    $("inbox-user-sections");
 
-    if (!section) {
-        return;
-    }
+  if (!section) {
+    return;
+  }
 
-    section.innerHTML =
-        renderInboxUsers();
+  section.innerHTML =
+    renderInboxUsers();
 }
 
 function renderInboxUser(user) {
 
-    const isActive =
-        activeChatUser &&
-        String(activeChatUser.id) ===
-        String(user.id);
+  const isActive =
+    activeChatUser &&
+    String(activeChatUser.id) ===
+    String(user.id);
 
 
-    return `
+  return `
 
         <button
             type="button"
@@ -1380,16 +1380,15 @@ function renderInboxUser(user) {
             <div class="inbox-avatar-wrapper">
 
                 ${avatarHTML(
-                    user,
-                    "avatar avatar-md"
-                )}
+    user,
+    "avatar avatar-md"
+  )}
 
                 <span
-                    class="online-dot ${
-                        user.online
-                            ? "online"
-                            : ""
-                    }"
+                    class="online-dot ${user.online
+      ? "online"
+      : ""
+    }"
                 ></span>
 
             </div>
@@ -1399,16 +1398,16 @@ function renderInboxUser(user) {
 
                 <strong>
                     ${escapeHTML(
-                        user.name ||
-                        user.username ||
-                        "User"
-                    )}
+      user.name ||
+      user.username ||
+      "User"
+    )}
                 </strong>
 
                 <span>
                     @${escapeHTML(
-                        user.username || ""
-                    )}
+      user.username || ""
+    )}
                 </span>
 
             </div>
@@ -1420,48 +1419,48 @@ function renderInboxUser(user) {
 
 function selectChatUser(userId) {
 
-    const allUsers = [
-        ...followingUsers,
-        ...searchUsersResults,
-        ...inboxUsers
-    ];
+  const allUsers = [
+    ...followingUsers,
+    ...searchUsersResults,
+    ...inboxUsers
+  ];
 
-    const user =
-        allUsers.find(
-            item =>
-                String(item.id) ===
-                String(userId)
-        );
-
-    if (!user) {
-        return;
-    }
-
-    activeChatUser = user;
-
-    chatMessages = [];
-
-    renderInbox();
-
-    if (!socket || !socket.connected) {
-
-        showToast(
-            "Chat connection is not ready.",
-            "error"
-        );
-
-        return;
-    }
-
-    socket.emit(
-        "load-messages",
-        user.id
+  const user =
+    allUsers.find(
+      item =>
+        String(item.id) ===
+        String(userId)
     );
+
+  if (!user) {
+    return;
+  }
+
+  activeChatUser = user;
+
+  chatMessages = [];
+
+  renderInbox();
+
+  if (!socket || !socket.connected) {
+
+    showToast(
+      "Chat connection is not ready.",
+      "error"
+    );
+
+    return;
+  }
+
+  socket.emit(
+    "load-messages",
+    user.id
+  );
 }
 
 function renderEmptyChat() {
 
-    return `
+  return `
 
         <div class="chat-empty">
 
@@ -1488,38 +1487,38 @@ function renderEmptyChat() {
 
 function renderActiveChat() {
 
-    const panel =
-        $("chat-panel");
+  const panel =
+    $("chat-panel");
 
-    if (!panel || !activeChatUser) {
-        return;
-    }
+  if (!panel || !activeChatUser) {
+    return;
+  }
 
 
-    panel.innerHTML = `
+  panel.innerHTML = `
 
         <div class="chat-header">
 
             <div class="chat-header-user">
 
                 ${avatarHTML(
-                    activeChatUser,
-                    "avatar avatar-sm"
-                )}
+    activeChatUser,
+    "avatar avatar-sm"
+  )}
 
                 <div>
 
                     <strong>
                         ${escapeHTML(
-                            activeChatUser.name ||
-                            activeChatUser.username
-                        )}
+    activeChatUser.name ||
+    activeChatUser.username
+  )}
                     </strong>
 
                     <span>
                         @${escapeHTML(
-                            activeChatUser.username
-                        )}
+    activeChatUser.username
+  )}
                     </span>
 
                 </div>
@@ -1527,17 +1526,15 @@ function renderActiveChat() {
             </div>
 
             <span
-                class="chat-online-status ${
-                    activeChatUser.online
-                        ? "online"
-                        : ""
-                }"
+                class="chat-online-status ${activeChatUser.online
+      ? "online"
+      : ""
+    }"
             >
-                ${
-                    activeChatUser.online
-                        ? "Online"
-                        : "Offline"
-                }
+                ${activeChatUser.online
+      ? "Online"
+      : "Offline"
+    }
             </span>
 
         </div>
@@ -1576,16 +1573,16 @@ function renderActiveChat() {
     `;
 
 
-    setupChatInput();
+  setupChatInput();
 
-    scrollChatToBottom();
+  scrollChatToBottom();
 }
 
 function renderMessagesHTML() {
 
-    if (!chatMessages.length) {
+  if (!chatMessages.length) {
 
-        return `
+    return `
 
             <div class="chat-no-messages">
 
@@ -1600,47 +1597,45 @@ function renderMessagesHTML() {
             </div>
 
         `;
-    }
+  }
 
 
-    return chatMessages
-        .map(message => {
+  return chatMessages
+    .map(message => {
 
-            const mine =
-                String(message.senderId) ===
-                String(
-                    currentUser.id ||
-                    currentUser._id
-                );
+      const mine =
+        String(message.senderId) ===
+        String(
+          currentUser.id ||
+          currentUser._id
+        );
 
 
-            return `
+      return `
 
                 <div
-                    class="chat-message-row ${
-                        mine
-                            ? "mine"
-                            : "theirs"
-                    }"
+                    class="chat-message-row ${mine
+          ? "mine"
+          : "theirs"
+        }"
                 >
 
                     <div
-                        class="chat-message ${
-                            mine
-                                ? "mine"
-                                : "theirs"
-                        }"
+                        class="chat-message ${mine
+          ? "mine"
+          : "theirs"
+        }"
                     >
 
                         ${escapeHTML(
-                            message.message
-                        )}
+          message.message
+        )}
 
                         <span class="chat-message-time">
 
                             ${formatDate(
-                                message.createdAt
-                            )}
+          message.createdAt
+        )}
 
                         </span>
 
@@ -1650,396 +1645,770 @@ function renderMessagesHTML() {
 
             `;
 
-        })
-        .join("");
+    })
+    .join("");
 }
 
 function renderChatMessages() {
 
-    if (!activeChatUser) {
-        return;
-    }
+  if (!activeChatUser) {
+    return;
+  }
 
-    const messages =
-        $("chat-messages");
+  const messages =
+    $("chat-messages");
 
-    if (!messages) {
-        return;
-    }
+  if (!messages) {
+    return;
+  }
 
-    messages.innerHTML =
-        renderMessagesHTML();
+  messages.innerHTML =
+    renderMessagesHTML();
 
-    scrollChatToBottom();
+  scrollChatToBottom();
 }
 
 function scrollChatToBottom() {
 
-    const messages =
-        $("chat-messages");
+  const messages =
+    $("chat-messages");
 
-    if (!messages) {
-        return;
-    }
+  if (!messages) {
+    return;
+  }
 
-    messages.scrollTop =
-        messages.scrollHeight;
+  messages.scrollTop =
+    messages.scrollHeight;
 }
 
 function sendChatMessage() {
 
-    const input =
-        $("chat-message-input");
+  const input =
+    $("chat-message-input");
 
-    if (!input) {
-        return;
-    }
+  if (!input) {
+    return;
+  }
 
-    const message =
-        input.value.trim();
+  const message =
+    input.value.trim();
 
-    if (!message) {
-        return;
-    }
+  if (!message) {
+    return;
+  }
 
-    if (!activeChatUser) {
+  if (!activeChatUser) {
 
-        showToast(
-            "Select a user first.",
-            "error"
-        );
-
-        return;
-    }
-
-    if (!socket || !socket.connected) {
-
-        showToast(
-            "Chat connection is not available.",
-            "error"
-        );
-
-        return;
-    }
-
-
-    socket.emit(
-        "private-message",
-        {
-            receiverId:
-                activeChatUser.id,
-
-            message
-        }
+    showToast(
+      "Select a user first.",
+      "error"
     );
 
+    return;
+  }
 
-    input.value = "";
+  if (!socket || !socket.connected) {
 
-    input.focus();
+    showToast(
+      "Chat connection is not available.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  socket.emit(
+    "private-message",
+    {
+      receiverId:
+        activeChatUser.id,
+
+      message
+    }
+  );
+
+
+  input.value = "";
+
+  input.focus();
 }
 
 function setupChatInput() {
 
-    const input =
-        $("chat-message-input");
+  const input =
+    $("chat-message-input");
 
-    const button =
-        $("chat-send-button");
-
-
-    button?.addEventListener(
-        "click",
-        sendChatMessage
-    );
+  const button =
+    $("chat-send-button");
 
 
-    input?.addEventListener(
-        "keydown",
-        event => {
+  button?.addEventListener(
+    "click",
+    sendChatMessage
+  );
 
-            if (
-                event.key === "Enter"
-            ) {
 
-                event.preventDefault();
+  input?.addEventListener(
+    "keydown",
+    event => {
 
-                sendChatMessage();
-            }
-        }
-    );
+      if (
+        event.key === "Enter"
+      ) {
+
+        event.preventDefault();
+
+        sendChatMessage();
+      }
+    }
+  );
 }
 
 
 function handleIncomingMessage(message) {
 
-    if (!message) {
-        return;
+  if (!message) {
+    return;
+  }
+
+
+  const currentUserId =
+    String(
+      currentUser.id ||
+      currentUser._id
+    );
+
+
+  const senderId =
+    String(
+      message.senderId
+    );
+
+  const receiverId =
+    String(
+      message.receiverId
+    );
+
+
+  const belongsToCurrentChat =
+    activeChatUser &&
+    (
+      (
+        senderId === currentUserId &&
+        receiverId ===
+        String(activeChatUser.id)
+      )
+      ||
+      (
+        receiverId === currentUserId &&
+        senderId ===
+        String(activeChatUser.id)
+      )
+    );
+
+
+  if (belongsToCurrentChat) {
+
+    const exists =
+      chatMessages.some(
+        item =>
+          String(item.id) ===
+          String(message.id)
+      );
+
+    if (!exists) {
+
+      chatMessages.push(
+        message
+      );
     }
 
-
-    const currentUserId =
-        String(
-            currentUser.id ||
-            currentUser._id
-        );
+    renderChatMessages();
+  }
 
 
-    const senderId =
-        String(
-            message.senderId
-        );
-
-    const receiverId =
-        String(
-            message.receiverId
-        );
+  // Add the other user to the inbox
+  const otherUserId =
+    senderId === currentUserId
+      ? receiverId
+      : senderId;
 
 
-    const belongsToCurrentChat =
-        activeChatUser &&
-        (
-            (
-                senderId === currentUserId &&
-                receiverId ===
-                    String(activeChatUser.id)
-            )
-            ||
-            (
-                receiverId === currentUserId &&
-                senderId ===
-                    String(activeChatUser.id)
-            )
-        );
+  const existsInInbox =
+    inboxUsers.some(
+      user =>
+        String(user.id) ===
+        otherUserId
+    );
 
 
-    if (belongsToCurrentChat) {
+  if (!existsInInbox) {
 
-        const exists =
-            chatMessages.some(
-                item =>
-                    String(item.id) ===
-                    String(message.id)
-            );
+    inboxUsers.push({
 
-        if (!exists) {
+      id: otherUserId,
 
-            chatMessages.push(
-                message
-            );
-        }
+      username:
+        message.senderName ||
+        "User",
 
-        renderChatMessages();
-    }
+      profile:
+        message.senderProfile ||
+        "",
 
+      online: true
+    });
 
-    // Add the other user to the inbox
-    const otherUserId =
-        senderId === currentUserId
-            ? receiverId
-            : senderId;
-
-
-    const existsInInbox =
-        inboxUsers.some(
-            user =>
-                String(user.id) ===
-                otherUserId
-        );
-
-
-    if (!existsInInbox) {
-
-        inboxUsers.push({
-
-            id: otherUserId,
-
-            username:
-                message.senderName ||
-                "User",
-
-            profile:
-                message.senderProfile ||
-                "",
-
-            online: true
-        });
-
-        renderInbox();
-    }
+    renderInbox();
+  }
 }
 
 function setupInboxSearch() {
 
-    const input =
-        $("inbox-search-input");
+  const input =
+    $("inbox-search-input");
 
-    if (!input) {
+  if (!input) {
+    return;
+  }
+
+  input.addEventListener(
+    "input",
+    event => {
+
+      const search =
+        event.target.value.trim();
+
+      clearTimeout(searchTimer);
+
+      if (!search) {
+
+        searchUsersResults = [];
+
+        renderInboxUsersOnly();
+
         return;
-    }
+      }
 
-    input.addEventListener(
-        "input",
-        event => {
+      searchTimer = setTimeout(() => {
 
-            const search =
-                event.target.value.trim();
+        if (
+          socket &&
+          socket.connected
+        ) {
 
-            clearTimeout(searchTimer);
-
-            if (!search) {
-
-                searchUsersResults = [];
-
-                renderInboxUsersOnly();
-
-                return;
-            }
-
-            searchTimer = setTimeout(() => {
-
-                if (
-                    socket &&
-                    socket.connected
-                ) {
-
-                    socket.emit(
-                        "search-users",
-                        search
-                    );
-                }
-
-            }, 300);
+          socket.emit(
+            "search-users",
+            search
+          );
         }
-    );
+
+      }, 300);
+    }
+  );
 }
 
 function updateInboxUserStatus(
-    userId,
-    online
+  userId,
+  online
 ) {
 
-    const id =
-        String(userId);
+  const id =
+    String(userId);
 
 
-    followingUsers =
-        followingUsers.map(
-            user => {
+  followingUsers =
+    followingUsers.map(
+      user => {
 
-                if (
-                    String(user.id) ===
-                    id
-                ) {
+        if (
+          String(user.id) ===
+          id
+        ) {
 
-                    return {
-                        ...user,
-                        online
-                    };
-                }
-
-                return user;
-            }
-        );
-
-
-    inboxUsers =
-        inboxUsers.map(
-            user => {
-
-                if (
-                    String(user.id) ===
-                    id
-                ) {
-
-                    return {
-                        ...user,
-                        online
-                    };
-                }
-
-                return user;
-            }
-        );
-
-
-    if (
-        activeChatUser &&
-        String(activeChatUser.id) === id
-    ) {
-
-        activeChatUser = {
-            ...activeChatUser,
+          return {
+            ...user,
             online
-        };
-    }
+          };
+        }
+
+        return user;
+      }
+    );
 
 
-    renderInbox();
+  inboxUsers =
+    inboxUsers.map(
+      user => {
+
+        if (
+          String(user.id) ===
+          id
+        ) {
+
+          return {
+            ...user,
+            online
+          };
+        }
+
+        return user;
+      }
+    );
+
+
+  if (
+    activeChatUser &&
+    String(activeChatUser.id) === id
+  ) {
+
+    activeChatUser = {
+      ...activeChatUser,
+      online
+    };
+  }
+
+
+  renderInbox();
 }
 
 
 function updateInboxUserProfile(
-    userId,
-    profile
+  userId,
+  profile
 ) {
 
-    const id =
-        String(userId);
+  const id =
+    String(userId);
 
 
-    followingUsers =
-        followingUsers.map(
-            user => {
+  followingUsers =
+    followingUsers.map(
+      user => {
 
-                if (
-                    String(user.id) === id
-                ) {
+        if (
+          String(user.id) === id
+        ) {
 
-                    return {
-                        ...user,
-                        profile
-                    };
-                }
-
-                return user;
-            }
-        );
-
-
-    inboxUsers =
-        inboxUsers.map(
-            user => {
-
-                if (
-                    String(user.id) === id
-                ) {
-
-                    return {
-                        ...user,
-                        profile
-                    };
-                }
-
-                return user;
-            }
-        );
-
-
-    if (
-        activeChatUser &&
-        String(activeChatUser.id) === id
-    ) {
-
-        activeChatUser = {
-            ...activeChatUser,
+          return {
+            ...user,
             profile
-        };
+          };
+        }
+
+        return user;
+      }
+    );
+
+
+  inboxUsers =
+    inboxUsers.map(
+      user => {
+
+        if (
+          String(user.id) === id
+        ) {
+
+          return {
+            ...user,
+            profile
+          };
+        }
+
+        return user;
+      }
+    );
+
+
+  if (
+    activeChatUser &&
+    String(activeChatUser.id) === id
+  ) {
+
+    activeChatUser = {
+      ...activeChatUser,
+      profile
+    };
+  }
+
+
+  renderInbox();
+}
+
+
+
+async function toggleLike(postId) {
+
+    if (!currentToken) {
+
+        showToast(
+            "Please sign in to like posts.",
+            "error"
+        );
+
+        return;
     }
 
 
-    renderInbox();
+    try {
+
+        const data =
+            await apiRequest(
+                `${API}/likes/${postId}`,
+                {
+                    method: "POST"
+                }
+            );
+
+
+        // Find post in local state
+        const post =
+            allPosts.find(
+                item =>
+                    String(item._id) ===
+                    String(postId)
+            );
+
+
+        if (post) {
+
+            post.isLiked =
+                data.liked;
+
+            post.likesCount =
+                data.likesCount;
+        }
+
+
+        // Update feed
+        renderFeed(allPosts);
+
+
+        // Also update profile posts
+        renderProfilePostsAfterLike(
+            postId,
+            data
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Toggle like error:",
+            error
+        );
+
+
+        showToast(
+            error.message ||
+            "Unable to update like.",
+            "error"
+        );
+    }
 }
+
+function renderProfilePostsAfterLike(
+    postId,
+    data
+) {
+
+    const profileContainer =
+        $("profile-posts-container");
+
+    if (!profileContainer) {
+        return;
+    }
+
+
+    const post =
+        allPosts.find(
+            item =>
+                String(item._id) ===
+                String(postId)
+        );
+
+
+    if (!post) {
+        return;
+    }
+
+
+    const existingCard =
+        profileContainer.querySelector(
+            `[data-post-id="${postId}"]`
+        );
+
+
+    if (!existingCard) {
+        return;
+    }
+
+
+    // Re-render profile posts
+    profileContainer.innerHTML =
+        allPosts
+            .filter(postItem => {
+
+                const authorId =
+                    postItem.author?._id ||
+                    postItem.author?.id;
+
+                const userId =
+                    currentUser?.id ||
+                    currentUser?._id;
+
+                return (
+                    String(authorId) ===
+                    String(userId)
+                );
+            })
+            .map(renderPost)
+            .join("");
+}
+
+function createLikesModal() {
+
+    if ($("likes-modal")) {
+        return;
+    }
+
+
+    const modal =
+        document.createElement("div");
+
+
+    modal.id =
+        "likes-modal";
+
+
+    modal.className =
+        "likes-modal hidden";
+
+
+    modal.innerHTML = `
+
+        <div class="likes-modal-content">
+
+            <div class="likes-modal-header">
+
+                <div>
+
+                    <h3>
+                        Likes
+                    </h3>
+
+                    <span id="likes-modal-count">
+                        0 likes
+                    </span>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="close-likes-modal"
+                    class="likes-close-btn"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+
+            <div
+                id="likes-container"
+                class="likes-container"
+            >
+
+                <div class="likes-loading">
+                    Loading...
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    document.body.appendChild(
+        modal
+    );
+
+
+    $("close-likes-modal")
+        ?.addEventListener(
+            "click",
+            closeLikesModal
+        );
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                closeLikesModal();
+            }
+        }
+    );
+}
+
+
+async function openLikes(postId) {
+
+    createLikesModal();
+
+
+    const modal =
+        $("likes-modal");
+
+    const container =
+        $("likes-container");
+
+    const count =
+        $("likes-modal-count");
+
+
+    modal.classList.remove(
+        "hidden"
+    );
+
+
+    container.innerHTML = `
+
+        <div class="likes-loading">
+
+            Loading likes...
+
+        </div>
+
+    `;
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                `${API}/likes/${postId}`,
+                {
+                    method: "GET"
+                }
+            );
+
+
+        const users =
+            Array.isArray(data.users)
+                ? data.users
+                : [];
+
+
+        count.textContent =
+            `${users.length} ${
+                users.length === 1
+                    ? "like"
+                    : "likes"
+            }`;
+
+
+        if (!users.length) {
+
+            container.innerHTML = `
+
+                <div class="likes-empty">
+
+                    <i class="fa-regular fa-heart"></i>
+
+                    <p>
+                        No one has liked this post yet.
+                    </p>
+
+                </div>
+
+            `;
+
+            return;
+        }
+
+
+        container.innerHTML =
+            users
+                .map(user => `
+
+                    <div class="like-user">
+
+                        ${avatarHTML(
+                            user,
+                            "avatar avatar-sm"
+                        )}
+
+                        <div class="like-user-info">
+
+                            <strong>
+                                ${escapeHTML(
+                                    user.name ||
+                                    user.username ||
+                                    "User"
+                                )}
+                            </strong>
+
+                            <span>
+                                @${escapeHTML(
+                                    user.username ||
+                                    ""
+                                )}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                `)
+                .join("");
+
+
+    } catch (error) {
+
+        console.error(
+            "Load likes error:",
+            error
+        );
+
+
+        container.innerHTML = `
+
+            <div class="likes-empty">
+
+                <p>
+                    Unable to load likes.
+                </p>
+
+            </div>
+
+        `;
+    }
+}
+
+
+function closeLikesModal() {
+
+    const modal =
+        $("likes-modal");
+
+    if (!modal) {
+        return;
+    }
+
+
+    modal.classList.add(
+        "hidden"
+    );
+}
+
 
 /* =========================================================
    UNAVAILABLE VIEW
@@ -2361,20 +2730,46 @@ function renderPost(post) {
 </button>
 
 
-                <button
-                    type="button"
-                    class="post-action-btn"
-                    disabled
-                >
+               <button
+    type="button"
+    class="post-action-btn post-like-btn ${post.isLiked
+      ? "liked"
+      : ""
+    }"
+    data-action="toggle-like"
+    data-id="${escapeHTML(post._id)}"
+    aria-label="${post.isLiked
+      ? "Unlike post"
+      : "Like post"
+    }"
+>
+    <i
+        class="${post.isLiked
+      ? "fa-solid"
+      : "fa-regular"
+    } fa-heart"
+    ></i>
 
-                    <i
-                        class="fa-regular
-                        fa-heart"
-                    ></i>
+    <span class="like-count">
+        ${post.likesCount || 0}
+    </span>
+</button>
 
-                    ${post.likesCount || 0}
 
-                </button>
+<button
+    type="button"
+    class="post-action-btn like-count-btn"
+    data-action="open-likes"
+    data-id="${escapeHTML(post._id)}"
+>
+    ${post.likesCount
+      ? `View ${post.likesCount} ${post.likesCount === 1
+        ? "like"
+        : "likes"
+      }`
+      : "Be the first to like this"
+    }
+</button>
 
 
                 <button
@@ -4861,6 +5256,22 @@ function handleDynamicClicks(event) {
     return;
   }
 
+  // ---------- LIKES ----------
+
+  if (action === "toggle-like") {
+
+    toggleLike(id);
+
+    return;
+  }
+
+
+  if (action === "open-likes") {
+
+    openLikes(id);
+
+    return;
+  }
 
   // ---------- FOLLOW LISTS ----------
 
@@ -4877,6 +5288,7 @@ function handleDynamicClicks(event) {
 
     return;
   }
+
 
 
   // ---------- COMMENTS ----------
@@ -5359,25 +5771,25 @@ function setupEventListeners() {
       }
     );
 
-    $("inbox-container")
+  $("inbox-container")
     ?.addEventListener(
-        "click",
-        event => {
+      "click",
+      event => {
 
-            const userButton =
-                event.target.closest(
-                    "[data-inbox-user-id]"
-                );
+        const userButton =
+          event.target.closest(
+            "[data-inbox-user-id]"
+          );
 
-            if (!userButton) {
-                return;
-            }
-
-            selectChatUser(
-                userButton.dataset
-                    .inboxUserId
-            );
+        if (!userButton) {
+          return;
         }
+
+        selectChatUser(
+          userButton.dataset
+            .inboxUserId
+        );
+      }
     );
 }
 
