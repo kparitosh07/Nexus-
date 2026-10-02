@@ -9,6 +9,13 @@ let currentToken = null;
 let allPosts = [];
 let allUsers = [];
 
+let socket = null;
+let followingUsers = [];
+let inboxUsers = [];
+let searchUsersResults = [];
+let activeChatUser = null;
+let chatMessages = [];
+let searchTimer = null;
 let currentCommentPostId = null;
 let replyingToComment = null;
 let currentPostComments = [];
@@ -279,15 +286,17 @@ function showAuth() {
 
 function showApp() {
 
-  $("auth-section")
-    ?.classList.add("hidden");
+    $("auth-section")
+        ?.classList.add("hidden");
 
-  $("main-app")
-    ?.classList.remove("hidden");
+    $("main-app")
+        ?.classList.remove("hidden");
 
-  updateUserUI();
+    updateUserUI();
 
-  switchView("feed");
+    connectSocket();
+
+    switchView("feed");
 }
 
 
@@ -821,20 +830,32 @@ async function handleGoogleCredential(
 
 function handleLogout() {
 
-  clearAuth();
+    if (socket) {
 
-  allPosts = [];
+        socket.disconnect();
 
-  allUsers = [];
+        socket = null;
+    }
 
-  showAuth();
+    followingUsers = [];
+    inboxUsers = [];
+    searchUsersResults = [];
+    activeChatUser = null;
+    chatMessages = [];
 
-  switchAuthTab("signin");
+    clearAuth();
 
-  showToast(
-    "You have been signed out.",
-    "success"
-  );
+    allPosts = [];
+    allUsers = [];
+
+    showAuth();
+
+    switchAuthTab("signin");
+
+    showToast(
+        "You have been signed out.",
+        "success"
+    );
 }
 
 
@@ -996,13 +1017,1029 @@ function switchView(view) {
 
   if (view === "inbox") {
 
-    renderUnavailableView(
-      "Inbox is not connected yet.",
-      "Your backend currently has no messaging API."
-    );
-  }
+    renderInbox();
+
+    if (
+        socket &&
+        socket.connected
+    ) {
+
+        socket.emit(
+            "load-following"
+        );
+    }
+}
 }
 
+function connectSocket() {
+
+    if (!currentToken) {
+        return;
+    }
+
+    // Don't create multiple connections
+    if (socket && socket.connected) {
+        return;
+    }
+
+    socket = io({
+        auth: {
+            token: currentToken
+        }
+    });
+
+    socket.on("connect", () => {
+
+        console.log(
+            "Socket connected:",
+            socket.id
+        );
+
+        socket.emit(
+            "load-following"
+        );
+
+        if (activeChatUser) {
+
+            socket.emit(
+                "load-messages",
+                activeChatUser.id
+            );
+        }
+    });
+
+    socket.on("connect_error", (error) => {
+
+        console.error(
+            "Socket connection error:",
+            error.message
+        );
+
+        showToast(
+            "Realtime chat connection failed.",
+            "error"
+        );
+    });
+
+    socket.on("disconnect", () => {
+
+        console.log(
+            "Socket disconnected"
+        );
+    });
+
+
+    // Following users
+    socket.on(
+        "following-list",
+        (users) => {
+
+            followingUsers =
+                Array.isArray(users)
+                    ? users
+                    : [];
+
+            inboxUsers = [
+                ...followingUsers
+            ];
+
+            renderInbox();
+        }
+    );
+
+
+    // Search results
+    socket.on("search-results", (users) => {
+
+    searchUsersResults =
+        Array.isArray(users)
+            ? users
+            : [];
+
+    // Only update the user list
+    // Don't recreate the search input
+    renderInboxUsersOnly();
+});
+
+
+    // Chat history
+    socket.on(
+        "chat-history",
+        (messages) => {
+
+            chatMessages =
+                Array.isArray(messages)
+                    ? messages
+                    : [];
+
+            renderChatMessages();
+        }
+    );
+
+
+    // New real-time message
+    socket.on(
+        "private-message",
+        (message) => {
+
+            handleIncomingMessage(
+                message
+            );
+        }
+    );
+
+
+    // A new chat was added
+    socket.on(
+        "chat-added",
+        (user) => {
+
+            if (!user?.id) {
+                return;
+            }
+
+            const exists =
+                inboxUsers.some(
+                    item =>
+                        String(item.id) ===
+                        String(user.id)
+                );
+
+            if (!exists) {
+
+                inboxUsers.push(user);
+            }
+
+            renderInbox();
+        }
+    );
+
+
+    // Online/offline status
+    socket.on(
+        "user-status",
+        ({ userId, online }) => {
+
+            updateInboxUserStatus(
+                userId,
+                online
+            );
+        }
+    );
+
+
+    // Profile updated
+    socket.on(
+        "profile-updated",
+        ({ userId, profile }) => {
+
+            updateInboxUserProfile(
+                userId,
+                profile
+            );
+        }
+    );
+}
+
+
+function renderInbox() {
+
+    const container = $("inbox-container");
+
+    if (!container) {
+        return;
+    }
+
+    // Save current search text before rebuilding DOM
+    const existingSearchInput =
+        $("inbox-search-input");
+
+    const currentSearch =
+        existingSearchInput
+            ? existingSearchInput.value
+            : "";
+
+
+    container.innerHTML = `
+
+        <div class="inbox-layout">
+
+            <div class="inbox-sidebar">
+
+                <div class="inbox-search">
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <input
+                        type="text"
+                        id="inbox-search-input"
+                        placeholder="Search users..."
+                        autocomplete="off"
+                        value="${escapeHTML(currentSearch)}"
+                    >
+
+                </div>
+
+                <div
+                    class="inbox-user-sections"
+                    id="inbox-user-sections"
+                >
+                    ${renderInboxUsers()}
+                </div>
+
+            </div>
+
+            <div
+                class="chat-panel"
+                id="chat-panel"
+            >
+                ${renderEmptyChat()}
+            </div>
+
+        </div>
+    `;
+
+
+    setupInboxSearch();
+
+    // Restore cursor/focus after rebuilding
+    const newSearchInput =
+        $("inbox-search-input");
+
+    if (newSearchInput) {
+
+        newSearchInput.focus();
+
+        // Put cursor at the end
+        newSearchInput.setSelectionRange(
+            newSearchInput.value.length,
+            newSearchInput.value.length
+        );
+    }
+
+
+    if (activeChatUser) {
+        renderActiveChat();
+    }
+}
+
+
+
+function renderInboxUsers() {
+
+    const following =
+        followingUsers || [];
+
+    const searchResults =
+        searchUsersResults || [];
+
+
+    let html = "";
+
+
+    html += `
+
+        <div class="inbox-section-title">
+
+            Following
+
+        </div>
+    `;
+
+
+    if (!following.length) {
+
+        html += `
+
+            <div class="inbox-empty-small">
+
+                You are not following anyone yet.
+
+            </div>
+        `;
+
+    } else {
+
+        html += following
+            .map(renderInboxUser)
+            .join("");
+    }
+
+
+    if (
+        searchResults.length
+    ) {
+
+        html += `
+
+            <div class="inbox-section-title">
+
+                Search Results
+
+            </div>
+        `;
+
+        html += searchResults
+            .map(renderInboxUser)
+            .join("");
+    }
+
+
+    return html;
+}
+
+function renderInboxUsersOnly() {
+
+    const section =
+        $("inbox-user-sections");
+
+    if (!section) {
+        return;
+    }
+
+    section.innerHTML =
+        renderInboxUsers();
+}
+
+function renderInboxUser(user) {
+
+    const isActive =
+        activeChatUser &&
+        String(activeChatUser.id) ===
+        String(user.id);
+
+
+    return `
+
+        <button
+            type="button"
+            class="inbox-user ${isActive ? "active" : ""}"
+            data-inbox-user-id="${escapeHTML(user.id)}"
+        >
+
+            <div class="inbox-avatar-wrapper">
+
+                ${avatarHTML(
+                    user,
+                    "avatar avatar-md"
+                )}
+
+                <span
+                    class="online-dot ${
+                        user.online
+                            ? "online"
+                            : ""
+                    }"
+                ></span>
+
+            </div>
+
+
+            <div class="inbox-user-info">
+
+                <strong>
+                    ${escapeHTML(
+                        user.name ||
+                        user.username ||
+                        "User"
+                    )}
+                </strong>
+
+                <span>
+                    @${escapeHTML(
+                        user.username || ""
+                    )}
+                </span>
+
+            </div>
+
+        </button>
+
+    `;
+}
+
+function selectChatUser(userId) {
+
+    const allUsers = [
+        ...followingUsers,
+        ...searchUsersResults,
+        ...inboxUsers
+    ];
+
+    const user =
+        allUsers.find(
+            item =>
+                String(item.id) ===
+                String(userId)
+        );
+
+    if (!user) {
+        return;
+    }
+
+    activeChatUser = user;
+
+    chatMessages = [];
+
+    renderInbox();
+
+    if (!socket || !socket.connected) {
+
+        showToast(
+            "Chat connection is not ready.",
+            "error"
+        );
+
+        return;
+    }
+
+    socket.emit(
+        "load-messages",
+        user.id
+    );
+}
+
+function renderEmptyChat() {
+
+    return `
+
+        <div class="chat-empty">
+
+            <div class="chat-empty-icon">
+
+                <i class="fa-regular fa-comments"></i>
+
+            </div>
+
+            <h3>
+                Select a user
+            </h3>
+
+            <p>
+                Choose someone from your following
+                or search for another user to start chatting.
+            </p>
+
+        </div>
+
+    `;
+}
+
+
+function renderActiveChat() {
+
+    const panel =
+        $("chat-panel");
+
+    if (!panel || !activeChatUser) {
+        return;
+    }
+
+
+    panel.innerHTML = `
+
+        <div class="chat-header">
+
+            <div class="chat-header-user">
+
+                ${avatarHTML(
+                    activeChatUser,
+                    "avatar avatar-sm"
+                )}
+
+                <div>
+
+                    <strong>
+                        ${escapeHTML(
+                            activeChatUser.name ||
+                            activeChatUser.username
+                        )}
+                    </strong>
+
+                    <span>
+                        @${escapeHTML(
+                            activeChatUser.username
+                        )}
+                    </span>
+
+                </div>
+
+            </div>
+
+            <span
+                class="chat-online-status ${
+                    activeChatUser.online
+                        ? "online"
+                        : ""
+                }"
+            >
+                ${
+                    activeChatUser.online
+                        ? "Online"
+                        : "Offline"
+                }
+            </span>
+
+        </div>
+
+
+        <div
+            class="chat-messages"
+            id="chat-messages"
+        >
+
+            ${renderMessagesHTML()}
+
+        </div>
+
+
+        <div class="chat-input-area">
+
+            <input
+                type="text"
+                id="chat-message-input"
+                placeholder="Write a message..."
+                autocomplete="off"
+            >
+
+            <button
+                type="button"
+                id="chat-send-button"
+                class="btn-primary"
+            >
+
+                <i class="fa-solid fa-paper-plane"></i>
+
+            </button>
+
+        </div>
+    `;
+
+
+    setupChatInput();
+
+    scrollChatToBottom();
+}
+
+function renderMessagesHTML() {
+
+    if (!chatMessages.length) {
+
+        return `
+
+            <div class="chat-no-messages">
+
+                <p>
+                    No messages yet.
+                </p>
+
+                <span>
+                    Say hello 👋
+                </span>
+
+            </div>
+
+        `;
+    }
+
+
+    return chatMessages
+        .map(message => {
+
+            const mine =
+                String(message.senderId) ===
+                String(
+                    currentUser.id ||
+                    currentUser._id
+                );
+
+
+            return `
+
+                <div
+                    class="chat-message-row ${
+                        mine
+                            ? "mine"
+                            : "theirs"
+                    }"
+                >
+
+                    <div
+                        class="chat-message ${
+                            mine
+                                ? "mine"
+                                : "theirs"
+                        }"
+                    >
+
+                        ${escapeHTML(
+                            message.message
+                        )}
+
+                        <span class="chat-message-time">
+
+                            ${formatDate(
+                                message.createdAt
+                            )}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        })
+        .join("");
+}
+
+function renderChatMessages() {
+
+    if (!activeChatUser) {
+        return;
+    }
+
+    const messages =
+        $("chat-messages");
+
+    if (!messages) {
+        return;
+    }
+
+    messages.innerHTML =
+        renderMessagesHTML();
+
+    scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+
+    const messages =
+        $("chat-messages");
+
+    if (!messages) {
+        return;
+    }
+
+    messages.scrollTop =
+        messages.scrollHeight;
+}
+
+function sendChatMessage() {
+
+    const input =
+        $("chat-message-input");
+
+    if (!input) {
+        return;
+    }
+
+    const message =
+        input.value.trim();
+
+    if (!message) {
+        return;
+    }
+
+    if (!activeChatUser) {
+
+        showToast(
+            "Select a user first.",
+            "error"
+        );
+
+        return;
+    }
+
+    if (!socket || !socket.connected) {
+
+        showToast(
+            "Chat connection is not available.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    socket.emit(
+        "private-message",
+        {
+            receiverId:
+                activeChatUser.id,
+
+            message
+        }
+    );
+
+
+    input.value = "";
+
+    input.focus();
+}
+
+function setupChatInput() {
+
+    const input =
+        $("chat-message-input");
+
+    const button =
+        $("chat-send-button");
+
+
+    button?.addEventListener(
+        "click",
+        sendChatMessage
+    );
+
+
+    input?.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                sendChatMessage();
+            }
+        }
+    );
+}
+
+
+function handleIncomingMessage(message) {
+
+    if (!message) {
+        return;
+    }
+
+
+    const currentUserId =
+        String(
+            currentUser.id ||
+            currentUser._id
+        );
+
+
+    const senderId =
+        String(
+            message.senderId
+        );
+
+    const receiverId =
+        String(
+            message.receiverId
+        );
+
+
+    const belongsToCurrentChat =
+        activeChatUser &&
+        (
+            (
+                senderId === currentUserId &&
+                receiverId ===
+                    String(activeChatUser.id)
+            )
+            ||
+            (
+                receiverId === currentUserId &&
+                senderId ===
+                    String(activeChatUser.id)
+            )
+        );
+
+
+    if (belongsToCurrentChat) {
+
+        const exists =
+            chatMessages.some(
+                item =>
+                    String(item.id) ===
+                    String(message.id)
+            );
+
+        if (!exists) {
+
+            chatMessages.push(
+                message
+            );
+        }
+
+        renderChatMessages();
+    }
+
+
+    // Add the other user to the inbox
+    const otherUserId =
+        senderId === currentUserId
+            ? receiverId
+            : senderId;
+
+
+    const existsInInbox =
+        inboxUsers.some(
+            user =>
+                String(user.id) ===
+                otherUserId
+        );
+
+
+    if (!existsInInbox) {
+
+        inboxUsers.push({
+
+            id: otherUserId,
+
+            username:
+                message.senderName ||
+                "User",
+
+            profile:
+                message.senderProfile ||
+                "",
+
+            online: true
+        });
+
+        renderInbox();
+    }
+}
+
+function setupInboxSearch() {
+
+    const input =
+        $("inbox-search-input");
+
+    if (!input) {
+        return;
+    }
+
+    input.addEventListener(
+        "input",
+        event => {
+
+            const search =
+                event.target.value.trim();
+
+            clearTimeout(searchTimer);
+
+            if (!search) {
+
+                searchUsersResults = [];
+
+                renderInboxUsersOnly();
+
+                return;
+            }
+
+            searchTimer = setTimeout(() => {
+
+                if (
+                    socket &&
+                    socket.connected
+                ) {
+
+                    socket.emit(
+                        "search-users",
+                        search
+                    );
+                }
+
+            }, 300);
+        }
+    );
+}
+
+function updateInboxUserStatus(
+    userId,
+    online
+) {
+
+    const id =
+        String(userId);
+
+
+    followingUsers =
+        followingUsers.map(
+            user => {
+
+                if (
+                    String(user.id) ===
+                    id
+                ) {
+
+                    return {
+                        ...user,
+                        online
+                    };
+                }
+
+                return user;
+            }
+        );
+
+
+    inboxUsers =
+        inboxUsers.map(
+            user => {
+
+                if (
+                    String(user.id) ===
+                    id
+                ) {
+
+                    return {
+                        ...user,
+                        online
+                    };
+                }
+
+                return user;
+            }
+        );
+
+
+    if (
+        activeChatUser &&
+        String(activeChatUser.id) === id
+    ) {
+
+        activeChatUser = {
+            ...activeChatUser,
+            online
+        };
+    }
+
+
+    renderInbox();
+}
+
+
+function updateInboxUserProfile(
+    userId,
+    profile
+) {
+
+    const id =
+        String(userId);
+
+
+    followingUsers =
+        followingUsers.map(
+            user => {
+
+                if (
+                    String(user.id) === id
+                ) {
+
+                    return {
+                        ...user,
+                        profile
+                    };
+                }
+
+                return user;
+            }
+        );
+
+
+    inboxUsers =
+        inboxUsers.map(
+            user => {
+
+                if (
+                    String(user.id) === id
+                ) {
+
+                    return {
+                        ...user,
+                        profile
+                    };
+                }
+
+                return user;
+            }
+        );
+
+
+    if (
+        activeChatUser &&
+        String(activeChatUser.id) === id
+    ) {
+
+        activeChatUser = {
+            ...activeChatUser,
+            profile
+        };
+    }
+
+
+    renderInbox();
+}
 
 /* =========================================================
    UNAVAILABLE VIEW
@@ -4320,6 +5357,27 @@ function setupEventListeners() {
         }
 
       }
+    );
+
+    $("inbox-container")
+    ?.addEventListener(
+        "click",
+        event => {
+
+            const userButton =
+                event.target.closest(
+                    "[data-inbox-user-id]"
+                );
+
+            if (!userButton) {
+                return;
+            }
+
+            selectChatUser(
+                userButton.dataset
+                    .inboxUserId
+            );
+        }
     );
 }
 

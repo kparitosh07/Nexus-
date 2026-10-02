@@ -1,7 +1,10 @@
 import socketAuth from "../middleware/socketAuth.js";
-import { searchUsers,profileUpdated } from "./user.socket.js";
-import { registerChatHandlers } from "./chat.socket.js";
+import {
+    searchUsers,
+    profileUpdated
+} from "./user.socket.js";
 
+import { registerChatHandlers } from "./chat.socket.js";
 
 const onlineUsers = new Map();
 
@@ -11,10 +14,7 @@ export const registerSocketHandlers = (io) => {
 
     io.on("connection", (socket) => {
 
-        console.log(
-            `${socket.username} connected`
-        );
-
+        console.log(`${socket.username} connected`);
         socket.join(`user:${socket.userId}`);
 
         onlineUsers.set(
@@ -28,34 +28,28 @@ export const registerSocketHandlers = (io) => {
         });
 
         socket.on("search-users", (search) => {
-            searchUsers(
-                socket,
-                onlineUsers,
-                search
-            );
-            profileUpdated(socket, io);
+            searchUsers(socket,onlineUsers,search);
         });
 
-        registerChatHandlers(
-            socket,
-            io,
-            onlineUsers
-        );
+        profileUpdated(socket, io);
+        registerChatHandlers(socket,io,onlineUsers);
 
         socket.on("disconnect", () => {
 
-            console.log(
-                `${socket.username} disconnected`
-            );
+            console.log(`${socket.username} disconnected`);
+            if (
+                onlineUsers.get(socket.userId) ===
+                socket.id
+            ) {
+                onlineUsers.delete(
+                    socket.userId
+                );
 
-            onlineUsers.delete(
-                socket.userId
-            );
-
-            io.emit("user-status", {
-                userId: socket.userId,
-                online: false
-            });
+                io.emit("user-status", {
+                    userId: socket.userId,
+                    online: false
+                });
+            }
         });
     });
 };
