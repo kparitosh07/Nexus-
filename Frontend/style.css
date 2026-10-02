@@ -3570,3 +3570,62 @@ img {
 
     margin-bottom: 10px;
 }
+
+.modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    overflow-y: auto;
+
+    background: rgba(0, 0, 0, 0.55);
+
+    z-index: 10000;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 500px;
+
+    max-height: 90vh;
+
+    overflow-y: auto;
+
+    background: var(--bg-primary);
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    margin: auto;
+}
+
+.profile-upload-preview {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.profile-upload-preview img {
+    display: block;
+
+    width: 120px;
+    height: 120px;
+
+    max-width: 100%;
+
+    object-fit: cover;
+
+    border-radius: 50%;
+
+    margin: 0 auto;
+}

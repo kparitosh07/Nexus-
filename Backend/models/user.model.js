@@ -40,7 +40,13 @@ const userSchema = new mongoose.Schema({
   },
 
   profile: {
-    type: String
+    type: String,
+    default: ""
+  },
+
+  profilePublicId: {
+    type: String,
+    default: ""
   },
 
   followersCount: {

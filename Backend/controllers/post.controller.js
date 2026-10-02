@@ -1,47 +1,113 @@
 import { Post } from "../models/post.model.js";
 import { User } from "../models/user.model.js";
 import { Like } from "../models/likes.model.js";
+import { uploadToCloudinary } from "../utils/cloudinaryUpload.js";
+
+const extractHashtags = (text = "") => {
+
+    const matches =
+        text.match(
+            /#[a-zA-Z0-9_]+/g
+        ) || [];
+
+
+    return [
+        ...new Set(
+            matches.map(
+                tag =>
+                    tag
+                        .slice(1)
+                        .toLowerCase()
+            )
+        )
+    ];
+};
 
 export const createPost = async (req, res) => {
     try {
-        const { content, media, hashtags, mentions } = req.body;
+        const content = req.body.content?.trim() || "";
+        let media = null;
+        if (req.file) {
 
-        if (!content?.trim() && !media?.url) {
+            const uploaded =
+                await uploadToCloudinary(
+                    req.file.buffer,
+                    "nexus/posts",
+                    "image"
+                );
+
+
+            media = {
+                url: uploaded.secure_url,
+                publicId: uploaded.public_id,
+                type: "image"
+            };
+        }
+
+        if (!content && !media) {
+
             return res.status(400).json({
-                message: "Post cannot be empty"
+
+                message:
+                    "Post cannot be empty"
             });
         }
 
         const post = await Post.create({
             author: req.user.userId,
-            content: content?.trim() || "",
+            content,
             media,
-            hashtags,
-            mentions
+            hashtags:
+                extractHashtags(
+                    content
+                ),
+            mentions: []
         });
 
-        await User.findByIdAndUpdate(req.user.userId, {
-            $inc: { postsCount: 1 }
-        });
+        await User.findByIdAndUpdate(
+            req.user.userId,
+            {
+                $inc: {
+                    postsCount: 1
+                }
+            }
+        );
 
-        const populatedPost = await Post.findById(post._id)
-            .populate("author", "name username profile");
 
-        res.status(201).json({
+        const populatedPost =
+            await Post.findById(
+                post._id
+            )
+                .populate(
+                    "author",
+                    "name username profile"
+                );
+
+
+        return res.status(201).json({
             message: "Post created successfully",
             post: populatedPost
         });
 
-    } catch (error) {
-        console.error("Create post error:", error);
 
-        res.status(500).json({
-            message: "Failed to create post",
-            error: error.message
+    } catch (error) {
+
+        console.error(
+            "Create post error:",
+            error
+        );
+
+
+        return res.status(500).json({
+
+            message:
+                "Failed to create post",
+
+            error:
+                error.message
         });
     }
 };
-
 export const getPosts = async (req, res) => {
 
     try {

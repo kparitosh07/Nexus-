@@ -317,13 +317,6 @@
                 </button>
               </div>
 
-              <!-- Media Attachment Input Bar (supports file upload or image URL) -->
-              <div id="image-url-bar" class="image-url-bar hidden">
-                <input type="url" id="post-image-url-input" placeholder="Paste image URL here (https://...)"
-                  class="input-inline">
-                <button type="button" class="btn-secondary btn-sm" id="btn-apply-image-url">Attach</button>
-              </div>
-
               <!-- Post Toolbar & Submit -->
               <div class="create-post-footer">
                 <div class="create-post-actions">
@@ -332,10 +325,6 @@
                     <i class="fa-regular fa-image"></i>
                     <input type="file" id="post-file-input" accept="image/*" class="sr-only">
                   </label>
-                  <!-- Image URL Button -->
-                  <button type="button" class="action-icon-btn" id="btn-toggle-image-url" title="Attach image via URL">
-                    <i class="fa-solid fa-link"></i>
-                  </button>
                   <!-- Emoji Shortcut Button -->
                   <button type="button" class="action-icon-btn" id="btn-insert-emoji" title="Insert emoji">
                     <i class="fa-regular fa-face-smile"></i>
@@ -562,8 +551,21 @@
           <textarea id="edit-profile-bio" rows="3" class="input-modal"></textarea>
         </div>
         <div class="form-group">
-          <label for="edit-profile-avatar">Avatar URL</label>
-          <input type="url" id="edit-profile-avatar" placeholder="https://..." class="input-modal">
+          <div class="form-group">
+
+            <label for="edit-profile-avatar-file">
+              Profile Picture
+            </label>
+
+            <input type="file" id="edit-profile-avatar-file" accept="image/*" class="input-modal">
+
+            <div id="edit-profile-avatar-preview" class="profile-upload-preview hidden">
+
+              <img id="edit-profile-avatar-preview-img" src="" alt="Profile preview">
+
+            </div>
+
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" id="btn-cancel-edit">Cancel</button>

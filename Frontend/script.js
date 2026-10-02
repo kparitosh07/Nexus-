@@ -201,23 +201,26 @@ function clearAuth() {
    API HEADERS
    ========================================================= */
 
-function authHeaders(includeJSON = true) {
+function authHeaders(includeJSON = false) {
 
-  const headers = {};
+    const headers = {};
 
-  if (includeJSON) {
 
-    headers["Content-Type"] =
-      "application/json";
-  }
+    if (includeJSON) {
 
-  if (currentToken) {
+        headers["Content-Type"] =
+            "application/json";
+    }
 
-    headers["Authorization"] =
-      `Bearer ${currentToken}`;
-  }
 
-  return headers;
+    if (currentToken) {
+
+        headers["Authorization"] =
+            `Bearer ${currentToken}`;
+    }
+
+
+    return headers;
 }
 
 
@@ -225,50 +228,66 @@ function authHeaders(includeJSON = true) {
    GENERIC API REQUEST
    ========================================================= */
 
-async function apiRequest(url, options = {}) {
+async function apiRequest(
+    url,
+    options = {}
+) {
 
-  const headers = {
-    ...authHeaders(
-      options.body !== undefined
-    ),
-    ...(options.headers || {})
-  };
+    const isFormData =
+        options.body instanceof FormData;
 
-  const response =
-    await fetch(url, {
-      ...options,
-      headers
-    });
 
-  let data = {};
+    const headers = {
 
-  try {
+        ...authHeaders(
+            !isFormData &&
+            options.body !== undefined
+        ),
 
-    data =
-      await response.json();
+        ...(options.headers || {})
+    };
 
-  } catch {
 
-    data = {};
-  }
+    const response =
+        await fetch(
+            url,
+            {
+                ...options,
+                headers
+            }
+        );
 
-  if (!response.ok) {
 
-    const error =
-      new Error(
-        data.message ||
-        "Something went wrong"
-      );
+    let data = {};
 
-    error.status =
-      response.status;
+    try {
 
-    throw error;
-  }
+        data =
+            await response.json();
 
-  return data;
+    } catch {
+
+        data = {};
+    }
+
+
+    if (!response.ok) {
+
+        const error =
+            new Error(
+                data.message ||
+                "Request failed"
+            );
+
+        error.status =
+            response.status;
+
+        throw error;
+    }
+
+
+    return data;
 }
-
 
 /* =========================================================
    AUTH UI
@@ -2802,151 +2821,150 @@ function renderPost(post) {
 
 async function createPost() {
 
-  if (!currentToken) {
+    if (!currentToken) {
 
-    showToast(
-      "Please sign in first.",
-      "error"
-    );
+        showToast(
+            "Please sign in first.",
+            "error"
+        );
 
-    return;
-  }
-
-
-  const input =
-    $("post-input-text");
-
-
-  const content =
-    input?.value.trim() || "";
-
-
-  const imageURL =
-    $("post-image-url-input")
-      ?.value
-      .trim() || "";
-
-
-  if (!content && !imageURL) {
-
-    showToast(
-      "Write something before posting.",
-      "error"
-    );
-
-    return;
-  }
-
-
-  const button =
-    $("btn-submit-post");
-
-
-  try {
-
-    if (button) {
-
-      button.disabled = true;
-
-      button.textContent =
-        "Posting...";
+        return;
     }
 
 
-    const payload = {
-
-      content,
-
-      media:
-        imageURL
-          ? {
-            url: imageURL,
-            type: "image"
-          }
-          : undefined,
-
-      hashtags:
-        extractHashtags(content),
-
-      mentions: []
-    };
+    const input =
+        $("post-input-text");
 
 
-    const data =
-      await apiRequest(
-        `${API}/tweets`,
-        {
-          method: "POST",
+    const content =
+        input?.value.trim() || "";
 
-          body:
-            JSON.stringify(
-              payload
-            )
+
+    const fileInput =
+        $("post-file-input");
+
+
+    const file =
+        fileInput?.files?.[0];
+
+
+    if (!content && !file) {
+
+        showToast(
+            "Write something or select an image.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    // ==========================================
+    // CREATE FORM DATA
+    // ==========================================
+
+    const formData =
+        new FormData();
+
+
+    formData.append(
+        "content",
+        content
+    );
+
+
+    if (file) {
+
+        formData.append(
+            "image",
+            file
+        );
+    }
+
+
+    const button =
+        $("btn-submit-post");
+
+
+    try {
+
+        if (button) {
+
+            button.disabled = true;
+
+            button.textContent =
+                "Posting...";
         }
-      );
 
 
-    if (data.post) {
+        const data =
+            await apiRequest(
+                `${API}/tweets`,
+                {
+                    method: "POST",
 
-      /*
-       * Backend createPost returns
-       * the newly created post.
-       *
-       * It isn't populated yet,
-       * so reload the feed after
-       * creation.
-       */
+                    body:
+                        formData
+                }
+            );
 
-      await loadPosts();
+
+        if (data.post) {
+
+            await loadPosts();
+        }
+
+
+        // Clear text
+
+        if (input) {
+            input.value = "";
+        }
+
+
+        // Clear file
+
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+
+        removeImagePreview();
+
+        updateCharCounter();
+
+
+        showToast(
+            "Post published!",
+            "success"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Create post error:",
+            error
+        );
+
+
+        showToast(
+            error.message ||
+            "Failed to create post.",
+            "error"
+        );
+
+
+    } finally {
+
+        if (button) {
+
+            button.disabled = false;
+
+            button.textContent =
+                "Post";
+        }
     }
-
-
-    if (input) {
-
-      input.value = "";
-    }
-
-
-    if ($("post-image-url-input")) {
-
-      $("post-image-url-input")
-        .value = "";
-    }
-
-
-    removeImagePreview();
-
-    updateCharCounter();
-
-
-    showToast(
-      "Post published!",
-      "success"
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Create post error:",
-      error
-    );
-
-    showToast(
-      error.message ||
-      "Failed to create post.",
-      "error"
-    );
-
-  } finally {
-
-    if (button) {
-
-      button.textContent =
-        "Post";
-
-      updateCharCounter();
-    }
-  }
 }
 
 /* =========================================================
@@ -4533,108 +4551,146 @@ function closeEditProfileModal() {
 
 async function saveProfile(event) {
 
-  event.preventDefault();
+    event.preventDefault();
 
 
-  if (!currentUser) {
-    return;
-  }
-
-
-  const userId =
-    currentUser.id ||
-    currentUser._id;
-
-
-  const name =
-    $("edit-profile-name")
-      ?.value
-      .trim();
-
-
-  const bio =
-    $("edit-profile-bio")
-      ?.value
-      .trim();
-
-
-  const profile =
-    $("edit-profile-avatar")
-      ?.value
-      .trim();
-
-
-  try {
-
-    const data =
-      await apiRequest(
-        `${API}/users/${userId}`,
-        {
-          method: "PATCH",
-
-          body:
-            JSON.stringify({
-
-              name,
-
-              bio,
-
-              profile
-            })
-        }
-      );
-
-
-    if (data.user) {
-
-      currentUser = {
-
-        ...currentUser,
-
-        ...data.user,
-
-        id:
-          data.user._id ||
-          userId
-      };
-
-
-      localStorage.setItem(
-        "nexus_user",
-        JSON.stringify(
-          currentUser
-        )
-      );
+    if (!currentUser) {
+        return;
     }
 
 
-    updateUserUI();
+    const name =
+        $("edit-profile-name")
+            ?.value
+            .trim() || "";
 
 
-    await renderProfile();
+    const bio =
+        $("edit-profile-bio")
+            ?.value
+            .trim() || "";
 
 
-    closeEditProfileModal();
+    const fileInput =
+        $("edit-profile-avatar-file");
 
 
-    showToast(
-      "Profile updated successfully.",
-      "success"
+    const file =
+        fileInput?.files?.[0];
+
+
+    if (!name) {
+
+        showToast(
+            "Name cannot be empty.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const formData =
+        new FormData();
+
+
+    formData.append(
+        "name",
+        name
     );
 
-  } catch (error) {
 
-    console.error(
-      "Profile update error:",
-      error
+    formData.append(
+        "bio",
+        bio
     );
 
-    showToast(
-      error.message ||
-      "Unable to update profile.",
-      "error"
-    );
-  }
+
+    if (file) {
+
+        formData.append(
+            "profile",
+            file
+        );
+    }
+
+
+    try {
+
+        const data =
+            await apiRequest(
+                `${API}/users/profile`,
+                {
+                    method: "PATCH",
+
+                    body:
+                        formData
+                }
+            );
+
+
+        if (data.user) {
+
+            currentUser = {
+
+                ...currentUser,
+
+                ...data.user,
+
+                id:
+                    data.user._id ||
+                    currentUser.id
+            };
+
+
+            localStorage.setItem(
+                "nexus_user",
+                JSON.stringify(
+                    currentUser
+                )
+            );
+        }
+
+
+        updateUserUI();
+
+        await renderProfile();
+
+
+        closeEditProfileModal();
+
+
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+
+        $("edit-profile-avatar-preview")
+            ?.classList.add(
+                "hidden"
+            );
+
+
+        showToast(
+            "Profile updated successfully.",
+            "success"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Profile update error:",
+            error
+        );
+
+
+        showToast(
+            error.message ||
+            "Unable to update profile.",
+            "error"
+        );
+    }
 }
 
 
@@ -4842,58 +4898,74 @@ function insertEmoji() {
 
 function handleLocalImagePreview(event) {
 
-  const file =
-    event.target.files?.[0];
+    const file =
+        event.target.files?.[0];
 
 
-  if (!file) {
-    return;
-  }
+    if (!file) {
+        return;
+    }
 
 
-  const objectURL =
-    URL.createObjectURL(file);
+    if (
+        !file.type.startsWith(
+            "image/"
+        )
+    ) {
+
+        showToast(
+            "Please select an image file.",
+            "error"
+        );
+
+        event.target.value = "";
+
+        return;
+    }
 
 
-  const preview =
-    $("image-preview-img");
+    if (
+        file.size >
+        5 * 1024 * 1024
+    ) {
+
+        showToast(
+            "Image must be smaller than 5 MB.",
+            "error"
+        );
+
+        event.target.value = "";
+
+        return;
+    }
 
 
-  const wrapper =
-    $("image-preview-wrapper");
+    const objectURL =
+        URL.createObjectURL(file);
 
 
-  if (preview) {
-
-    preview.src =
-      objectURL;
-  }
+    const preview =
+        $("image-preview-img");
 
 
-  wrapper
-    ?.classList.remove(
-      "hidden"
-    );
+    const wrapper =
+        $("image-preview-wrapper");
 
 
-  /*
-   * IMPORTANT:
-   *
-   * Your backend currently does NOT
-   * have a file upload endpoint.
-   *
-   * Therefore this only previews
-   * the image.
-   *
-   * To permanently store it,
-   * currently use the image URL
-   * field.
-   */
+    if (preview) {
 
-  showToast(
-    "Image preview ready. Use an image URL to save it with the post.",
-    "info"
-  );
+        preview.src =
+            objectURL;
+    }
+
+
+    wrapper
+        ?.classList.remove(
+            "hidden"
+        );
+
+
+    updateCharCounter();
 }
 
 async function followUser(userId, button) {
@@ -5522,6 +5594,12 @@ function setupEventListeners() {
 
   /* ---------- NAVIGATION ---------- */
 
+  $("post-file-input")
+    ?.addEventListener(
+        "change",
+        handleLocalImagePreview
+    );
+
   document
     .querySelectorAll(".nav-item")
     .forEach(button => {
@@ -5861,3 +5939,80 @@ document.addEventListener(
     restoreSession();
   }
 );
+
+
+
+function handleProfileImagePreview(
+    event
+) {
+
+    const file =
+        event.target.files?.[0];
+
+
+    if (!file) {
+        return;
+    }
+
+
+    if (
+        !file.type.startsWith(
+            "image/"
+        )
+    ) {
+
+        showToast(
+            "Please select an image file.",
+            "error"
+        );
+
+        event.target.value = "";
+
+        return;
+    }
+
+
+    if (
+        file.size >
+        5 * 1024 * 1024
+    ) {
+
+        showToast(
+            "Profile image must be smaller than 5 MB.",
+            "error"
+        );
+
+        event.target.value = "";
+
+        return;
+    }
+
+
+    const url =
+        URL.createObjectURL(file);
+
+
+    const preview =
+        $("edit-profile-avatar-preview");
+
+
+    const image =
+        $("edit-profile-avatar-preview-img");
+
+
+    if (image) {
+        image.src = url;
+    }
+
+
+    preview
+        ?.classList.remove(
+            "hidden"
+        );
+}
+
+$("edit-profile-avatar-file")
+    ?.addEventListener(
+        "change",
+        handleProfileImagePreview
+    );
